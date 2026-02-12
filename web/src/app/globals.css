@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .masonry-grid {
+    @apply columns-5 gap-5;
+  }
+  @media (max-width: 1600px) {
+    .masonry-grid { @apply columns-4; }
+  }
+  @media (max-width: 1200px) {
+    .masonry-grid { @apply columns-3; }
+  }
+  @media (max-width: 768px) {
+    .masonry-grid { @apply columns-2 gap-3; }
+  }
+  @media (max-width: 480px) {
+    .masonry-grid { @apply columns-1; }
+  }
+  
+  .masonry-item {
+    @apply break-inside-avoid mb-5;
+  }
+  
+  .image-overlay {
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%);
+  }
+  
+  .tab-active {
+    @apply bg-black text-white;
+  }
+  
+  .tab-inactive {
+    @apply bg-transparent text-gray-700 hover:bg-gray-100;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
