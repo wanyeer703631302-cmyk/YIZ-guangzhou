@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Folder, ChevronRight, Plus, LayoutGrid, Inbox, MoreHorizontal, GripVertical } from 'lucide-react'
+import { Folder, ChevronRight, Plus, LayoutGrid, Inbox, MoreHorizontal } from 'lucide-react'
 
 interface FolderType {
   id: string
@@ -55,15 +55,6 @@ export function FolderSidebar({ selectedFolder, onSelectFolder }: FolderSidebarP
     )
   }
 
-  const handleCreateFolder = () => {
-    if (newFolderName.trim()) {
-      // TODO: API call to create folder
-      console.log('Creating folder:', newFolderName)
-      setIsCreating(false)
-      setNewFolderName('')
-    }
-  }
-
   const renderFolder = (folder: FolderType, depth = 0) => {
     const isExpanded = expandedFolders.includes(folder.id)
     const hasChildren = folder.children && folder.children.length > 0
@@ -97,15 +88,6 @@ export function FolderSidebar({ selectedFolder, onSelectFolder }: FolderSidebarP
           <span className={`text-xs ${isSelected ? 'text-gray-300' : 'text-gray-400'}`}>
             {folder.count}
           </span>
-
-          {!isSelected && (
-            <button
-              onClick={(e) => e.stopPropagation()}
-              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
-          )}
         </button>
 
         {isExpanded &&
@@ -142,12 +124,6 @@ export function FolderSidebar({ selectedFolder, onSelectFolder }: FolderSidebarP
               autoFocus
             />
             <div className="flex gap-2">
-              <button
-                onClick={handleCreateFolder}
-                className="flex-1 bg-black text-white py-1.5 rounded-lg text-sm font-medium hover:bg-gray-800"
-              >
-                创建
-              </button>
               <button
                 onClick={() => setIsCreating(false)}
                 className="flex-1 bg-gray-200 text-gray-700 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-300"
