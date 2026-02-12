@@ -38,9 +38,7 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
 
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return
-
     setUploading(true)
-    // TODO: 实际上传逻辑
     setTimeout(() => {
       setUploading(false)
       onClose()
@@ -60,7 +58,6 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
         </div>
 
         <div className="p-6">
-          {/* Drop Zone */}
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -81,7 +78,7 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
               <UploadCloud className="w-8 h-8 text-gray-400" />
             </div>
             <p className="text-lg font-medium text-gray-900 mb-2">拖放图片到此处</p>
-            <p className="text-sm text-gray-500 mb-4">支持 JPG, PNG, GIF, WebP 格式，单个文件最大 20MB</p>
+            <p className="text-sm text-gray-500 mb-4">支持 JPG, PNG, GIF, WebP 格式</p>
             <label
               htmlFor="file-input"
               className="inline-block bg-black text-white px-6 py-2 rounded-full font-medium hover:bg-gray-800 transition-colors cursor-pointer"
@@ -90,7 +87,6 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
             </label>
           </div>
 
-          {/* Selected Files */}
           {selectedFiles.length > 0 && (
             <div className="mt-6">
               <h4 className="font-medium text-sm text-gray-700 mb-3">已选择 {selectedFiles.length} 个文件</h4>
@@ -116,7 +112,6 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
             </div>
           )}
 
-          {/* Folder Selection */}
           <div className="mt-6">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <Folder className="w-4 h-4" />
@@ -130,7 +125,6 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
             </select>
           </div>
 
-          {/* Tags */}
           <div className="mt-4">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <Tag className="w-4 h-4" />
@@ -140,7 +134,7 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
               type="text"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              placeholder="输入标签，用逗号分隔（如：界面, 图标, 蓝色）"
+              placeholder="输入标签，用逗号分隔"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
             />
           </div>
