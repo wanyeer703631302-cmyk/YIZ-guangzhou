@@ -9,12 +9,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
     defaultOptions: {
       queries: {
         staleTime: 60 * 1000,
+        retry: 1,
       },
     },
   }))
 
   return (
-    <SessionProvider>
+    <SessionProvider 
+      refetchInterval={5 * 60} // 5分钟刷新一次
+      refetchOnWindowFocus={false}
+    >
       <QueryClientProvider client={queryClient}>
         {children}
       </QueryClientProvider>
