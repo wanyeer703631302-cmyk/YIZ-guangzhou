@@ -24,29 +24,25 @@ const handler = NextAuth({
       }
     })
   ],
-  pages: {
-    signIn: '/login',
-    error: '/login'
-  },
-  session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60
-  },
+  pages: { signIn: '/login', error: '/login' },
+  session: { strategy: 'jwt' },
   callbacks: {
     async jwt({ token, user }: any) {
       if (user) {
-        token.id = user.id
-        token.role = user.role
+        token.id = user.id;
+        token.role = user.role;
       }
-      return token
+      return token;
     },
     async session({ session, token }: any) {
-      if (session && session.user) {
-        // 这里的强制转换确保即使 TS 检查开启也不会报错
-        (session.user as any).id = (token as any).id || (token as any).sub;
-        (session.user as any).role = (token as any).role || 'user';
+      if (session?.user) {
+        // 使用非常保险的写法
+        const userWithData = session.user as any;
+        const tokenWithData = token as any;
+        userWithData.id = tokenWithData.id || tokenWithData.sub;
+        userWithData.role = tokenWithData.role || 'user';
       }
-      return session
+      return session;
     }
   }
 })
