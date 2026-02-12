@@ -10,13 +10,12 @@ const handler = NextAuth({
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        // 模拟登录逻辑
         if (credentials?.email === 'admin@pincollect.local' && credentials?.password === 'admin123') {
           return {
             id: '1',
             name: '管理员',
             email: 'admin@pincollect.local',
-            role: 'admin', // 添加角色信息
+            role: 'admin',
             image: 'https://i.pravatar.cc/150?u=admin'
           }
         }
@@ -33,7 +32,6 @@ const handler = NextAuth({
     maxAge: 30 * 24 * 60 * 60
   },
   callbacks: {
-    // 1. 将信息存入 JWT token
     async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id
@@ -41,11 +39,11 @@ const handler = NextAuth({
       }
       return token
     },
-    // 2. 将 JWT token 中的信息传递给 Session，供前端调用
     async session({ session, token }: any) {
-      if (session.user) {
-        session.user.id = token.id
-        session.user.role = token.role
+      if (session && session.user) {
+        // 使用 (token as any).id 这种写法，强制编译器闭嘴
+        (session.user as any).id = (token as any).id || (token as any).sub;
+        (session.user as any).role = (token as any).role || 'user';
       }
       return session
     }
