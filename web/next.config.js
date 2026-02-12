@@ -5,23 +5,20 @@ const nextConfig = {
     unoptimized: true,
     domains: ['picsum.photos', 'i.pravatar.cc']
   },
-  async rewrites() {
-    // 关键点：如果环境变量没获取到，为了防止构建报错，这里做一个判断
-    // 但在 Vercel 生产环境中，它应该能获取到上面设置的值
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    
-    if (!apiUrl) {
-      console.warn('⚠️ 警告: NEXT_PUBLIC_API_URL 环境变量未设置，接口转发可能失效。');
-    }
-
+  // 添加这个，确保 API 路由正常工作
+  async headers() {
     return [
       {
         source: '/api/:path*',
-        // 使用环境变量拼接路径
-        destination: `${apiUrl}/api/:path*`,
-      },
+        headers: [
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,DELETE,PATCH,POST,PUT,OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization' },
+        ]
+      }
     ]
-  },
+  }
 }
 
 module.exports = nextConfig
