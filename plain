@@ -1,48 +1,37 @@
 pincollect/
 ├── README.md
 ├── .gitignore
-├── package.json                 # 根目录配置
-├── vercel.json                  # Vercel 配置
-├── railway.json                 # Railway 配置
+├── package.json          # 根目录（用于 Railway 识别）
 │
-├── web/                         # 前端代码 (Next.js)
+├── web/                  # 前端（Vercel 部署）
 │   ├── package.json
 │   ├── next.config.js
-│   ├── tailwind.config.js
+│   ├── vercel.json       # Vercel 配置文件
 │   ├── tsconfig.json
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── layout.tsx
-│   │   │   ├── page.tsx
-│   │   │   ├── globals.css
-│   │   │   ├── login/
-│   │   │   │   └── page.tsx
-│   │   │   └── api/
-│   │   │       └── auth/
-│   │   │           └── [...nextauth]/
-│   │   │               └── route.ts
-│   │   ├── components/
-│   │   │   ├── MasonryGrid.tsx
-│   │   │   ├── FolderSidebar.tsx
-│   │   │   ├── TagEditor.tsx
-│   │   │   ├── UploadModal.tsx
-│   │   │   └── UserTabs.tsx
-│   │   └── lib/
-│   │       ├── api.ts
-│   │       └── utils.ts
-│   └── public/
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   ├── .env.local.example
+│   └── src/
+│       ├── app/
+│       │   ├── layout.tsx
+│       │   ├── page.tsx
+│       │   ├── globals.css
+│       │   ├── login/
+│       │   │   └── page.tsx
+│       │   └── api/
+│       │       └── auth/
+│       │           └── [...nextauth]/
+│       │               └── route.ts
+│       └── components/
+│           ├── UserTabs.tsx
+│           ├── FolderSidebar.tsx
+│           ├── MasonryGrid.tsx
+│           └── UploadModal.tsx
 │
-└── server/                      # 后端代码 (Express)
+└── server/               # 后端（Railway 部署）
     ├── package.json
-    ├── src/
-    │   ├── index.ts
-    │   ├── auth/
-    │   │   └── auth.service.ts
-    │   ├── services/
-    │   │   ├── folder.service.ts
-    │   │   ├── tag.service.ts
-    │   │   └── asset.service.ts
-    │   └── middleware/
-    │       └── auth.middleware.ts
-    └── prisma/
-        └── schema.prisma        # 数据库模型
+    ├── tsconfig.json
+    ├── Procfile          # Railway 启动文件
+    ├── railway.toml      # Railway 配置文件
+    └── src/
+        └── index.ts
