@@ -5,15 +5,20 @@ const nextConfig = {
     unoptimized: true,
     domains: ['picsum.photos', 'i.pravatar.cc']
   },
-  // 👇 新增这一段，用于连接 Railway 后端
   async rewrites() {
+    // 关键点：如果环境变量没获取到，为了防止构建报错，这里做一个判断
+    // 但在 Vercel 生产环境中，它应该能获取到上面设置的值
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    
+    if (!apiUrl) {
+      console.warn('⚠️ 警告: NEXT_PUBLIC_API_URL 环境变量未设置，接口转发可能失效。');
+    }
+
     return [
       {
-        // 意思：前端请求 /api/xxx 时
         source: '/api/:path*',
-        // 转发到：环境变量里的网址/xxx
-        // 这里的 process.env.NEXT_PUBLIC_API_URL 就是你在 Vercel 设置的那个 https://...
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/:path*`,
+        // 使用环境变量拼接路径
+        destination: `${apiUrl}/api/:path*`,
       },
     ]
   },
