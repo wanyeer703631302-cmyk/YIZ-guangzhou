@@ -1,0 +1,13 @@
+{
+  "name": "pincollect",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["web", "server"],
+  "scripts": {
+    "dev:web": "cd web && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "build": "cd web && npm run build",
+    "deploy:web": "cd web && vercel --prod",
+    "deploy:server": "cd server && railway up"
+  }
+}
