@@ -10,8 +10,6 @@ const handler = NextAuth({
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        // 这里应该调用后端API验证
-        // 暂时使用硬编码的测试账号
         if (credentials?.email === 'admin@pincollect.local' && credentials?.password === 'admin123') {
           return {
             id: '1',
@@ -29,7 +27,7 @@ const handler = NextAuth({
   },
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30天
+    maxAge: 30 * 24 * 60 * 60,
   },
   callbacks: {
     async jwt({ token, user }) {
