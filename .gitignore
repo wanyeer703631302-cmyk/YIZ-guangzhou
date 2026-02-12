@@ -1,19 +1,27 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+*/node_modules/
 
 # Build
 .next/
 dist/
 build/
+*/dist/
+*/.next/
 
 # Env
 .env
 .env.local
 .env.production
+*/.env
 
 # Misc
 .DS_Store
 *.log
 .vercel
 .railway
+
+# IDE
+.vscode/
+.idea/
