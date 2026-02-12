@@ -1,33 +1,55 @@
 'use client'
 
 import { signIn } from 'next-auth/react'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') || '/'
+  
   const [email, setEmail] = useState('admin@pincollect.local')
   const [password, setPassword] = useState('admin123')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // 检查是否有错误参数
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam) {
+      const errorMessages: Record<string, string> = {
+        'CredentialsSignin': '邮箱或密码错误',
+        'SessionRequired': '请先登录',
+        'Default': '登录失败，请重试'
+      }
+      setError(errorMessages[errorParam] || errorMessages['Default'])
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    const result = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    })
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+        callbackUrl
+      })
 
-    if (result?.error) {
-      setError('邮箱或密码错误')
+      if (result?.error) {
+        setError('邮箱或密码错误')
+        setLoading(false)
+      } else if (result?.ok) {
+        router.push(callbackUrl)
+        router.refresh()
+      }
+    } catch (err) {
+      setError('系统错误，请重试')
       setLoading(false)
-    } else {
-      router.push('/')
-      router.refresh()
     }
   }
 
@@ -68,7 +90,9 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p className="text-red-500 text-sm">{error}</p>
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
           )}
 
           <button
