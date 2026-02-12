@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { useState, useEffect } from 'react'
 import { redirect } from 'next/navigation'
 import { UserTabs } from '@/components/UserTabs'
 import { FolderSidebar } from '@/components/FolderSidebar'
 import { MasonryGrid } from '@/components/MasonryGrid'
 import { UploadModal } from '@/components/UploadModal'
-import { Search, Plus, LayoutGrid, List } from 'lucide-react'
+import { Search, Plus, LayoutGrid, List, LogOut } from 'lucide-react'
+import { signOut } from 'next-auth/react'
 
 const MOCK_USERS = [
   { id: 'u1', name: '张设计', avatar: 'https://i.pravatar.cc/150?u=1', count: 128 },
@@ -25,11 +26,17 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showUpload, setShowUpload] = useState(false)
 
+  // 加载状态
   if (status === 'loading') {
-    return <div className="flex items-center justify-center min-h-screen">加载中...</div>
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin" />
+      </div>
+    )
   }
 
-  if (!session) {
+  // 未登录，重定向到登录页
+  if (status === 'unauthenticated' || !session) {
     redirect('/login')
   }
 
@@ -70,12 +77,23 @@ export default function Home() {
                 <span className="hidden sm:inline">上传</span>
               </button>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
                 <img
                   src={session.user?.image || 'https://i.pravatar.cc/150?u=admin'}
                   alt={session.user?.name || 'User'}
                   className="w-10 h-10 rounded-full object-cover"
                 />
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium">{session.user?.name}</p>
+                  <p className="text-xs text-gray-500">{session.user?.email}</p>
+                </div>
+                <button
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                  className="p-2 hover:bg-gray-100 rounded-full text-gray-500"
+                  title="退出登录"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
               </div>
             </div>
           </div>
