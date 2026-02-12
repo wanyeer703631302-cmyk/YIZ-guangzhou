@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+.next/
+dist/
+build/
+
+# Env
+.env
+.env.local
+.env.production
+
+# Misc
+.DS_Store
+*.log
+.vercel
+.railway
