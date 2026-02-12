@@ -7,7 +7,7 @@ import { UserTabs } from '@/components/UserTabs'
 import { FolderSidebar } from '@/components/FolderSidebar'
 import { MasonryGrid } from '@/components/MasonryGrid'
 import { UploadModal } from '@/components/UploadModal'
-import { Search, Plus, LayoutGrid, List, LogOut } from 'lucide-react'
+import { Search, Plus, LayoutGrid, List } from 'lucide-react'
 
 const MOCK_USERS = [
   { id: 'u1', name: '张设计', avatar: 'https://i.pravatar.cc/150?u=1', count: 128 },
