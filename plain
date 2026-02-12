@@ -1,0 +1,48 @@
+pincollect/
+├── README.md
+├── .gitignore
+├── package.json                 # 根目录配置
+├── vercel.json                  # Vercel 配置
+├── railway.json                 # Railway 配置
+│
+├── web/                         # 前端代码 (Next.js)
+│   ├── package.json
+│   ├── next.config.js
+│   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx
+│   │   │   ├── globals.css
+│   │   │   ├── login/
+│   │   │   │   └── page.tsx
+│   │   │   └── api/
+│   │   │       └── auth/
+│   │   │           └── [...nextauth]/
+│   │   │               └── route.ts
+│   │   ├── components/
+│   │   │   ├── MasonryGrid.tsx
+│   │   │   ├── FolderSidebar.tsx
+│   │   │   ├── TagEditor.tsx
+│   │   │   ├── UploadModal.tsx
+│   │   │   └── UserTabs.tsx
+│   │   └── lib/
+│   │       ├── api.ts
+│   │       └── utils.ts
+│   └── public/
+│
+└── server/                      # 后端代码 (Express)
+    ├── package.json
+    ├── src/
+    │   ├── index.ts
+    │   ├── auth/
+    │   │   └── auth.service.ts
+    │   ├── services/
+    │   │   ├── folder.service.ts
+    │   │   ├── tag.service.ts
+    │   │   └── asset.service.ts
+    │   └── middleware/
+    │       └── auth.middleware.ts
+    └── prisma/
+        └── schema.prisma        # 数据库模型
