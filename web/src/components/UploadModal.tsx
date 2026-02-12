@@ -13,6 +13,7 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [tags, setTags] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -36,13 +37,53 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
     setSelectedFiles((prev) => [...prev, ...files])
   }
 
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return
+    
     setUploading(true)
-    setTimeout(() => {
+    setUploadProgress(0)
+    
+    try {
+      const uploadedFiles = []
+      
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i]
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('folderId', folderId || '')
+        formData.append('tags', tags)
+        formData.append('title', file.name.replace(/\.[^/.]+$/, ''))
+        
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        })
+        
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.message || `上传失败: ${file.name}`)
+        }
+        
+        const result = await response.json()
+        uploadedFiles.push(result.data)
+        
+        // 更新进度
+        setUploadProgress(Math.round(((i + 1) / selectedFiles.length) * 100))
+      }
+      
+      // 上传成功
+      alert(`成功上传 ${uploadedFiles.length} 个文件`)
+      window.location.reload()
+    } catch (error: any) {
+      console.error('上传错误:', error)
+      alert(error.message || '上传失败，请重试')
+    } finally {
       setUploading(false)
-      onClose()
-    }, 2000)
+    }
   }
 
   return (
@@ -58,6 +99,7 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
         </div>
 
         <div className="p-6">
+          {/* Drop Zone */}
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -78,7 +120,7 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
               <UploadCloud className="w-8 h-8 text-gray-400" />
             </div>
             <p className="text-lg font-medium text-gray-900 mb-2">拖放图片到此处</p>
-            <p className="text-sm text-gray-500 mb-4">支持 JPG, PNG, GIF, WebP 格式</p>
+            <p className="text-sm text-gray-500 mb-4">支持 JPG, PNG, GIF, WebP 格式，单个文件最大 20MB</p>
             <label
               htmlFor="file-input"
               className="inline-block bg-black text-white px-6 py-2 rounded-full font-medium hover:bg-gray-800 transition-colors cursor-pointer"
@@ -87,37 +129,64 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
             </label>
           </div>
 
+          {/* Selected Files */}
           {selectedFiles.length > 0 && (
             <div className="mt-6">
-              <h4 className="font-medium text-sm text-gray-700 mb-3">已选择 {selectedFiles.length} 个文件</h4>
+              <h4 className="font-medium text-sm text-gray-700 mb-3">
+                已选择 {selectedFiles.length} 个文件
+              </h4>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {selectedFiles.map((file, index) => (
                   <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                     <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-medium text-gray-500">{file.name.split('.').pop()}</span>
+                      <span className="text-xs font-medium text-gray-500">
+                        {file.name.split('.').pop()?.toUpperCase()}
+                      </span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
                       <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
-                    <button
-                      onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== index))}
-                      className="p-1 hover:bg-gray-200 rounded-full text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    {!uploading && (
+                      <button
+                        onClick={() => removeFile(index)}
+                        className="p-1 hover:bg-gray-200 rounded-full text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
+          {/* Progress Bar */}
+          {uploading && (
+            <div className="mt-6">
+              <div className="flex justify-between text-sm text-gray-600 mb-2">
+                <span>上传进度</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-black h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Folder Selection */}
           <div className="mt-6">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <Folder className="w-4 h-4" />
               保存到文件夹
             </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white">
+            <select 
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white"
+              disabled={uploading}
+            >
               <option value="">全部素材</option>
               <option value="f1">UI设计</option>
               <option value="f2">营销素材</option>
@@ -125,6 +194,7 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
             </select>
           </div>
 
+          {/* Tags */}
           <div className="mt-4">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <Tag className="w-4 h-4" />
@@ -134,8 +204,9 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
               type="text"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              placeholder="输入标签，用逗号分隔"
+              placeholder="输入标签，用逗号分隔（如：界面, 图标, 蓝色）"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              disabled={uploading}
             />
           </div>
         </div>
@@ -143,7 +214,8 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
         <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-6 py-2 rounded-full font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+            disabled={uploading}
+            className="px-6 py-2 rounded-full font-medium text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50"
           >
             取消
           </button>
@@ -155,7 +227,7 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
             {uploading ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                上传中...
+                上传中 {uploadProgress > 0 && `(${uploadProgress}%)`}
               </>
             ) : (
               `上传 ${selectedFiles.length > 0 ? `(${selectedFiles.length})` : ''}`
