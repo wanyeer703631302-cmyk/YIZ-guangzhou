@@ -9,11 +9,10 @@ const PORT = process.env.PORT || 3001
 
 // 中间件
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || '*',
   credentials: true
 }))
 app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
 
 // 健康检查
 app.get('/health', (req, res) => {
@@ -22,10 +21,16 @@ app.get('/health', (req, res) => {
 
 // API路由
 app.get('/api', (req, res) => {
-  res.json({ message: 'PinCollect API v1.0' })
+  res.json({ 
+    message: 'PinCollect API v1.0',
+    env: process.env.NODE_ENV || 'development'
+  })
 })
 
-// 这里将添加更多路由...
+// 测试路由
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API is working!' })
+})
 
 // 错误处理
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -35,4 +40,5 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
 })
