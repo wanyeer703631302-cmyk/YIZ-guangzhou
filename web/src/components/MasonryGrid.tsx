@@ -28,7 +28,6 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode }: Masonry
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 模拟加载数据
     setLoading(true)
     const timer = setTimeout(() => {
       const newAssets: Asset[] = Array.from({ length: 20 }, (_, i) => ({
