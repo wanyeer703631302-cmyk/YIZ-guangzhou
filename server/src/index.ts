@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 3001
 // 支持多个前端域名（包括 Vercel 预览域名）
 const allowedOrigins = [
   // 生产环境域名
-  'https://viz-guangzhou-web.vercel.app',
+  'https://yiz-guangzhou-web.vercel.app',
   // 本地开发
   'http://localhost:3000',
   'http://localhost:5173',
