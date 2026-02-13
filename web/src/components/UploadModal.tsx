@@ -57,10 +57,12 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
       formData.append('title', file.name.replace(/\.[^/.]+$/, ''))
       
       // 修复：正确处理 API URL
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
-      // 移除末尾的斜杠，避免重复
-      const baseUrl = apiUrl.replace(/\/$/, '')
-      const uploadUrl = `${baseUrl}/api/upload`
+     const uploadUrl = '/api/upload'; 
+
+const response = await fetch(uploadUrl, {
+  method: 'POST',
+  body: formData
+});
       
       console.log('上传地址:', uploadUrl) // 调试用
       
