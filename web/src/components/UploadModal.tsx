@@ -77,7 +77,7 @@ const response = await fetch(uploadUrl, {
       }
       
       const result = await response.json()
-      console.log('上传成功:', result)
+      console.log('上传成功:', 云端地址是:', result.secure_url) 
       
       setUploadProgress(Math.round(((i + 1) / selectedFiles.length) * 100))
     }
