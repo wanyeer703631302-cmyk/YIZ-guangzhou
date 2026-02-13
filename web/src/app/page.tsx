@@ -1,8 +1,18 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useState, useEffect } from 'react' // 👈 确保引入了 useEffect
-// ... 其他引入不变
+import { useState, useEffect } from 'react'
+import { redirect } from 'next/navigation'
+import { signOut } from 'next-auth/react'
+import { Search, Plus, LayoutGrid, List, LogOut } from 'lucide-react'
+
+// 🌟 必须确保下面这几行 import 都在！
+import { UserTabs } from '@/components/UserTabs'
+import { FolderSidebar } from '@/components/FolderSidebar' // 👈 报错就是因为缺了这一行
+import { MasonryGrid } from '@/components/MasonryGrid'
+import { UploadModal } from '@/components/UploadModal'
+
+// ... 剩下的代码不变
 
 export default function Home() {
   const { data: session, status } = useSession()
