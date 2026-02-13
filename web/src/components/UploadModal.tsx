@@ -42,55 +42,52 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
   }
 
   const handleUpload = async () => {
-  if (selectedFiles.length === 0) return
-  
-  setUploading(true)
-  setUploadProgress(0)
-  
-  try {
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const file = selectedFiles[i]
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('folderId', folderId || '')
-      formData.append('tags', tags)
-      formData.append('title', file.name.replace(/\.[^/.]+$/, ''))
-      
-      // 修复：正确处理 API URL
-     const uploadUrl = '/api/upload'; 
-
-const response = await fetch(uploadUrl, {
-  method: 'POST',
-  body: formData
-});
-      
-      console.log('上传地址:', uploadUrl) // 调试用
-      
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData
-      })
-      
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || `上传失败: ${file.name}`)
+    if (selectedFiles.length === 0) return
+    
+    setUploading(true)
+    setUploadProgress(0)
+    
+    try {
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i]
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('folderId', folderId || '')
+        formData.append('tags', tags)
+        formData.append('title', file.name.replace(/\.[^/.]+$/, ''))
+        
+        // 构建 API URL
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+        const baseUrl = apiUrl.replace(/\/$/, '')
+        const uploadUrl = `${baseUrl}/api/upload`
+        
+        console.log('上传地址:', uploadUrl)
+        
+        const response = await fetch(uploadUrl, {
+          method: 'POST',
+          body: formData
+        })
+        
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.message || `上传失败: ${file.name}`)
+        }
+        
+        const result = await response.json()
+        console.log('上传结果:', result)
+        
+        setUploadProgress(Math.round(((i + 1) / selectedFiles.length) * 100))
       }
       
-      const result = await response.json()
-      console.log('上传成功:', 云端地址是:', result.secure_url) 
-      
-      setUploadProgress(Math.round(((i + 1) / selectedFiles.length) * 100))
+      alert('上传成功！')
+      window.location.reload()
+    } catch (error: any) {
+      console.error('上传失败:', error)
+      alert(error.message || '上传失败')
+    } finally {
+      setUploading(false)
     }
-    
-    alert('上传成功！')
-    window.location.reload()
-  } catch (error: any) {
-    console.error('上传错误:', error)
-    alert(error.message || '上传失败')
-  } finally {
-    setUploading(false)
   }
-}
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -98,7 +95,7 @@ const response = await fetch(uploadUrl, {
       
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative z-10 max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-xl font-bold">上传素材</h2>
+          <h2 className="text-xl font-bold">上传图片</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -193,10 +190,10 @@ const response = await fetch(uploadUrl, {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white"
               disabled={uploading}
             >
-              <option value="">全部素材</option>
+              <option value="">选择文件夹</option>
               <option value="f1">UI设计</option>
-              <option value="f2">营销素材</option>
-              <option value="f3">产品截图</option>
+              <option value="f2">灵感收藏</option>
+              <option value="f3">图标素材</option>
             </select>
           </div>
 
