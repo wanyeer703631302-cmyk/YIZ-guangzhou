@@ -3,6 +3,18 @@
 import { useEffect, useState } from 'react'
 import { Heart, Download, ExternalLink } from 'lucide-react'
 
+// MasonryGrid.tsx 核心部分
+{items.map((item) => (
+  <div key={item.id} className="...">
+    <img 
+      src={item.url} // 这里就是 Cloudinary 的地址
+      alt={item.title}
+      className="w-full h-auto rounded-lg"
+    />
+    <p>{item.title}</p>
+  </div>
+))}
+
 interface Asset {
   id: string
   url: string
