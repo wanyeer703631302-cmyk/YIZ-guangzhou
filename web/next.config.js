@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     unoptimized: true,
-    domains: ['picsum.photos', 'i.pravatar.cc']
+    domains: ['picsum.photos', 'i.pravatar.cc', 'res.cloudinary.com'] 
   },
   typescript: {
     ignoreBuildErrors: true,
