@@ -8,7 +8,16 @@ import { Search, Plus, LayoutGrid, List, LogOut } from 'lucide-react'
 
 // 🌟 必须确保下面这几行 import 都在！
 import { UserTabs } from '@/components/UserTabs'
-import { FolderSidebar } from '@/components/FolderSidebar' // 👈 报错就是因为缺了这一行
+// 确保有这一行！
+import { FolderSidebar } from '@/components/FolderSidebar'; 
+
+export default function Page() {
+  return (
+    <div>
+      <FolderSidebar /> {/* 如果没导入，这里就会报错 */}
+    </div>
+  );
+}
 import { MasonryGrid } from '@/components/MasonryGrid'
 import { UploadModal } from '@/components/UploadModal'
 
