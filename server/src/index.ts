@@ -2,10 +2,16 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import multer from 'multer'
-import path from 'path'
-import fs from 'fs'
+import { v2 as cloudinary } from 'cloudinary'
 
 dotenv.config()
+
+// 配置 Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+})
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -17,33 +23,15 @@ app.use(cors({
 }))
 app.use(express.json())
 
-// 创建上传目录
-const uploadsDir = path.join(__dirname, '..', 'uploads')
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true })
-}
-
-// 配置文件上传
-const storage = multer.diskStorage({
-  destination: (req: any, file: any, cb: any) => {
-    cb(null, uploadsDir)
-  },
-  filename: (req: any, file: any, cb: any) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    const ext = path.extname(file.originalname)
-    cb(null, uniqueSuffix + ext)
-  }
-})
-
+// 使用内存存储
 const upload = multer({ 
-  storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req: any, file: any, cb: any) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    if (allowedTypes.includes(file.mimetype)) {
+    if (file.mimetype.startsWith('image/')) {
       cb(null, true)
     } else {
-      cb(new Error('只支持 JPG, PNG, GIF, WebP 图片格式'))
+      cb(new Error('只支持图片文件'))
     }
   }
 })
@@ -53,47 +41,44 @@ const assets: any[] = []
 
 // 健康检查
 app.get('/health', (req: any, res: any) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString()
-  })
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
 // API 根
 app.get('/api', (req: any, res: any) => {
-  res.json({ 
-    message: 'PinCollect API v1.0',
-    endpoints: [
-      'POST /api/upload - 上传文件',
-      'GET /api/assets - 获取素材列表'
-    ]
-  })
+  res.json({ message: 'PinCollect API v1.0 with Cloudinary' })
 })
 
 // 文件上传接口
-app.post('/api/upload', upload.single('file'), (req: any, res: any) => {
+app.post('/api/upload', upload.single('file'), async (req: any, res: any) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: '没有上传文件' })
     }
 
-    const { folderId, tags, title } = req.body
+    // 上传到 Cloudinary
+    const b64 = Buffer.from(req.file.buffer).toString('base64')
+    const dataURI = "data:" + req.file.mimetype + ";base64," + b64
     
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol
-    const host = req.headers['x-forwarded-host'] || req.get('host')
-    const fileUrl = `${protocol}://${host}/uploads/${req.file.filename}`
+    const result = await cloudinary.uploader.upload(dataURI, {
+      folder: 'pincollect',
+      resource_type: 'auto'
+    })
+
+    const { folderId, tags, title } = req.body
     
     const asset = {
       id: Date.now().toString(),
       title: title || req.file.originalname,
       filename: req.file.filename,
       originalName: req.file.originalname,
-      url: fileUrl,
-      thumbnailUrl: fileUrl,
+      url: result.secure_url,
+      thumbnailUrl: result.secure_url.replace('/upload/', '/upload/w_400,h_400,c_fit/'),
       size: req.file.size,
       mimetype: req.file.mimetype,
       folderId: folderId || null,
       tags: tags ? tags.split(',').map((t: string) => t.trim()) : [],
+      cloudinaryId: result.public_id,
       createdAt: new Date().toISOString()
     }
     
@@ -138,8 +123,27 @@ app.get('/api/assets', (req: any, res: any) => {
   })
 })
 
-// 静态文件服务
-app.use('/uploads', express.static(uploadsDir))
+// 删除素材
+app.delete('/api/assets/:id', async (req: any, res: any) => {
+  const index = assets.findIndex((a: any) => a.id === req.params.id)
+  if (index === -1) {
+    return res.status(404).json({ error: '素材不存在' })
+  }
+  
+  const asset = assets[index]
+  
+  // 从 Cloudinary 删除
+  if (asset.cloudinaryId) {
+    try {
+      await cloudinary.uploader.destroy(asset.cloudinaryId)
+    } catch (e) {
+      console.error('删除 Cloudinary 文件失败:', e)
+    }
+  }
+  
+  assets.splice(index, 1)
+  res.json({ success: true, message: '删除成功' })
+})
 
 // 错误处理
 app.use((err: any, req: any, res: any, next: any) => {
@@ -152,4 +156,5 @@ app.use((err: any, req: any, res: any, next: any) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`)
+  console.log(`☁️  Cloudinary: ${process.env.CLOUDINARY_CLOUD_NAME || '未配置'}`)
 })
