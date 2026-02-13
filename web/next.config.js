@@ -2,8 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    unoptimized: true,
-    domains: ['picsum.photos', 'i.pravatar.cc', 'res.cloudinary.com'] 
+    domains: ['picsum.photos', 'i.pravatar.cc', 'res.cloudinary.com', 'yiz-guangzhou-production.up.railway.app'] 
   },
   typescript: {
     ignoreBuildErrors: true,
@@ -14,8 +13,7 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        // 👇 修改了这里：使用正则表达式排除掉 auth 路径
-        // 意思是：匹配 /api/ 中“不包含 auth”的所有路径
+        // 代理 API 请求到后端（除了 auth）
         source: '/api/((?!auth).*)', 
         destination: 'https://yiz-guangzhou-production.up.railway.app/api/:1*',
       },
