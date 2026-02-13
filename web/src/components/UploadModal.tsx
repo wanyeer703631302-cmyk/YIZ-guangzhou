@@ -42,49 +42,53 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
   }
 
   const handleUpload = async () => {
-    if (selectedFiles.length === 0) return
-    
-    setUploading(true)
-    setUploadProgress(0)
-    
-    try {
-      const uploadedFiles = []
+  if (selectedFiles.length === 0) return
+  
+  setUploading(true)
+  setUploadProgress(0)
+  
+  try {
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i]
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folderId', folderId || '')
+      formData.append('tags', tags)
+      formData.append('title', file.name.replace(/\.[^/.]+$/, ''))
       
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i]
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('folderId', folderId || '')
-        formData.append('tags', tags)
-        formData.append('title', file.name.replace(/\.[^/.]+$/, ''))
-        
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        })
-        
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.message || `上传失败: ${file.name}`)
-        }
-        
-        const result = await response.json()
-        uploadedFiles.push(result.data)
-        
-        // 更新进度
-        setUploadProgress(Math.round(((i + 1) / selectedFiles.length) * 100))
+      // 修复：正确处理 API URL
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+      // 移除末尾的斜杠，避免重复
+      const baseUrl = apiUrl.replace(/\/$/, '')
+      const uploadUrl = `${baseUrl}/api/upload`
+      
+      console.log('上传地址:', uploadUrl) // 调试用
+      
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || `上传失败: ${file.name}`)
       }
       
-      // 上传成功
-      alert(`成功上传 ${uploadedFiles.length} 个文件`)
-      window.location.reload()
-    } catch (error: any) {
-      console.error('上传错误:', error)
-      alert(error.message || '上传失败，请重试')
-    } finally {
-      setUploading(false)
+      const result = await response.json()
+      console.log('上传成功:', result)
+      
+      setUploadProgress(Math.round(((i + 1) / selectedFiles.length) * 100))
     }
+    
+    alert('上传成功！')
+    window.location.reload()
+  } catch (error: any) {
+    console.error('上传错误:', error)
+    alert(error.message || '上传失败')
+  } finally {
+    setUploading(false)
   }
+}
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
