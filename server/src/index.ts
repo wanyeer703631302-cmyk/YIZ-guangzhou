@@ -3,7 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import multer from 'multer'
 import { v2 as cloudinary } from 'cloudinary'
-
+export * from './FolderSidebar'; // 确保这行存在且路径正确
 dotenv.config()
 
 // 配置 Cloudinary
