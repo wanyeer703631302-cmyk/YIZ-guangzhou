@@ -16,13 +16,48 @@ cloudinary.config({
 const app = express()
 const PORT = process.env.PORT || 3001
 
+// 支持多个前端域名（包括 Vercel 预览域名）
+const allowedOrigins = [
+  // 生产环境域名
+  'https://viz-guangzhou-web.vercel.app',
+  // 本地开发
+  'http://localhost:3000',
+  'http://localhost:5173',
+  // 正则：匹配所有 vercel.app 子域名（预览部署）
+  /^https:\/\/[a-z0-9-]+\.vercel\.app$/,
+  // 正则：匹配所有 railway.app 子域名（如果有）
+  /^https:\/\/[a-z0-9-]+\.up\.railway\.app$/
+]
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  credentials: true
+  origin: function (origin, callback) {
+    // 允许没有 origin 的请求（如 Postman、服务器间请求）
+    if (!origin) return callback(null, true)
+    
+    // 检查是否匹配允许的域名
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (typeof allowed === 'string') {
+        return allowed === origin
+      }
+      // 正则匹配
+      return allowed.test(origin)
+    })
+    
+    if (isAllowed) {
+      callback(null, true)
+    } else {
+      console.log(`CORS blocked: ${origin}`)
+      callback(new Error(`CORS policy: ${origin} not allowed`))
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }))
+
 app.use(express.json())
 
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }
 })
@@ -30,8 +65,8 @@ const upload = multer({
 const assets: any[] = []
 
 app.get('/health', (req: any, res: any) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     cloudinary: process.env.CLOUDINARY_CLOUD_NAME ? 'configured' : 'not configured'
   })
 })
@@ -49,7 +84,7 @@ app.post('/api/upload', upload.single('file'), async (req: any, res: any) => {
     // 上传 to Cloudinary
     const b64 = Buffer.from(req.file.buffer).toString('base64')
     const dataURI = "data:" + req.file.mimetype + ";base64," + b64
-    
+
     const result = await cloudinary.uploader.upload(dataURI, {
       folder: 'pincollect',
       resource_type: 'auto'
@@ -65,9 +100,9 @@ app.post('/api/upload', upload.single('file'), async (req: any, res: any) => {
       tags: req.body.tags ? req.body.tags.split(',').map((t: string) => t.trim()) : [],
       createdAt: new Date().toISOString()
     }
-    
+
     assets.push(asset)
-    
+
     res.json({ success: true, data: asset })
   } catch (error: any) {
     console.error('Upload error:', error)
@@ -86,4 +121,5 @@ app.get('/api/assets', (req: any, res: any) => {
 
 app.listen(PORT, () => {
   console.log(`Server on port ${PORT}`)
+  console.log('CORS allowed origins:', allowedOrigins.map(o => typeof o === 'string' ? o : o.toString()))
 })
