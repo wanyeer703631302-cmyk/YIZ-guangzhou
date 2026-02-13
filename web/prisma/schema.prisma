@@ -1,1 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  username          String    @unique
+  passwordHash      String?   @map("password_hash")
+  role              String    @default("member")
+  authProvider      String    @default("local") @map("auth_provider")
+  authProviderId    String?   @map("auth_provider_id")
+  avatarUrl         String?   @map("avatar_url")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  assets      Asset[]
+  folders     Folder[]
+  tags        Tag[]
+  sessions    UserSession[]
+
+  @@map("users")
+}
+
+model UserSession {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  refreshTokenHash String  @map("refresh_token_hash")
+  deviceInfo      Json?    @map("device_info")
+  expiresAt       DateTime @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+model Folder {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  parentId    String?   @map("parent_id")
+  name        String
+  description String?
+  color       String    @default("#3B82F6")
+  icon        String    @default("folder")
+  sortOrder   Int       @default(0) @map("sort_order")
+  isSystem    Boolean   @default(false) @map("is_system")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   Folder?   @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children Folder[]  @relation("FolderHierarchy")
+  assets   Asset[]
+
+  @@map("folders")
+}
+
+model Asset {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  folderId     String?  @map("folder_id")
+  title        String?
+  description  String?
+  originalUrl  String?  @map("original_url")
+  storageUrl   String   @map("storage_url")
+  thumbnailUrl String?  @map("thumbnail_url")
+  width        Int?
+  height       Int?
+  fileSize     Int?     @map("file_size")
+  mimeType     String?  @map("mime_type")
+  sourceType   String?  @map("source_type")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder Folder? @relation(fields: [folderId], references: [id])
+  tags AssetTag[]
+
+  @@map("assets")
+}
+
+model Tag {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  color       String   @default("#3B82F6")
+  usageCount  Int      @default(0) @map("usage_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets    AssetTag[]
+
+  @@unique([userId, name])
+  @@map("tags")
+}
+
+model AssetTag {
+  assetId   String   @map("asset_id")
+  tagId     String   @map("tag_id")
+  addedAt   DateTime @default(now()) @map("added_at")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([assetId, tagId])
+  @@map("asset_tags")
+}
+
+model Material {
+  id        String   @id @default(cuid())
+  title     String
+  url       String   // 存放 Cloudinary 的 secure_url
+  tags      String?
+  folderId  String?
+  createdAt DateTime @default(now())
+}
