@@ -3,23 +3,20 @@
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { redirect } from 'next/navigation'
-import { signOut } from 'next-auth/react'
-import { Search, Plus, LayoutGrid, List, LogOut } from 'lucide-react'
-
-// 🌟 必须确保下面这几行 import 都在！
 import { UserTabs } from '@/components/UserTabs'
-// 确保有这一行！
-import { FolderSidebar } from '@/components/FolderSidebar'; 
-
-export default function Page() {
-  return (
-    <div>
-      <FolderSidebar /> {/* 如果没导入，这里就会报错 */}
-    </div>
-  );
-}
 import { MasonryGrid } from '@/components/MasonryGrid'
 import { UploadModal } from '@/components/UploadModal'
+import { Search, Plus, LayoutGrid, List, LogOut } from 'lucide-react'
+import { signOut } from 'next-auth/react'
+import dynamic from 'next/dynamic'
+
+// 动态导入 FolderSidebar，禁用 SSR
+const FolderSidebar = dynamic(
+  () => import('@/components/FolderSidebar').then(mod => mod.FolderSidebar),
+  { ssr: false }
+)
+
+// ... 其余代码保持不变
 
 // ... 剩下的代码不变
 
