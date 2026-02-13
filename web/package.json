@@ -1,34 +1,28 @@
 {
-  "name": "pincollect-web",
+  "name": "yiz-guangzhou-web",
   "version": "0.1.0",
-  "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    // 👇 关键修改：build 命令前加上 prisma generate
+    "build": "prisma generate && next build", 
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "next": "14.0.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^18",
+    "react-dom": "^18",
     "next-auth": "^4.24.5",
-    "@tanstack/react-query": "^5.13.4",
-    "axios": "^1.6.2",
-    "lucide-react": "^0.294.0",
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.1.0",
-    "cloudinary": "^2.5.1"
+    "cloudinary": "^2.5.1",
+    "@prisma/client": "^5.10.0" // 👈 添加这一行
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
-    "@types/node": "^20.10.4",
-    "@types/react": "^18.2.43",
-    "@types/react-dom": "^18.2.17",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.32",
-    "tailwindcss": "^3.3.6",
-    "eslint": "^8.55.0",
-    "eslint-config-next": "14.0.4"
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.4",
+    "prisma": "^5.10.0" // 👈 添加这一行
   }
 }
