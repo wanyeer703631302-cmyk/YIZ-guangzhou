@@ -27,8 +27,6 @@ export default function Home() {
   const [showUpload, setShowUpload] = useState(false)
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  
-
 
   // 获取素材数据
   useEffect(() => {
