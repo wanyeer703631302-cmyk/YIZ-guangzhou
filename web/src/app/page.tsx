@@ -28,9 +28,7 @@ export default function Home() {
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   
-  // 添加素材数据状态
-  const [items, setItems] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+
 
   // 获取素材数据
   useEffect(() => {
