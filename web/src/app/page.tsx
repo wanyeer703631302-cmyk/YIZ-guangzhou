@@ -24,7 +24,7 @@ export default function Home() {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-    const [showUpload, setShowUpload] = useState(false)
+  const [showUpload, setShowUpload] = useState(false)
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   
