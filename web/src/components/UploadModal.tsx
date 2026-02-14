@@ -61,7 +61,7 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
         const baseUrl = apiUrl.replace(/\/$/, '')
         const uploadUrl = `${baseUrl}/api/upload`
         
-        console.log('上传地址:', uploadUrl)
+        console.log('上传成功，云端地址是:', result.secure_url);
         
         const response = await fetch(uploadUrl, {
           method: 'POST',
