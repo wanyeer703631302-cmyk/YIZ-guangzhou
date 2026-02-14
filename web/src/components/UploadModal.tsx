@@ -57,12 +57,10 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
         formData.append('tags', tags)
         formData.append('title', file.name.replace(/\.[^/.]+$/, ''))
         
-        // 构建 API URL
+        // 构延 API URL
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
         const baseUrl = apiUrl.replace(/\/$/, '')
         const uploadUrl = `${baseUrl}/api/upload`
-        
-        console.log('上传成功:', result)
         
         const response = await fetch(uploadUrl, {
           method: 'POST',
@@ -209,7 +207,7 @@ export function UploadModal({ onClose, folderId }: UploadModalProps) {
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               placeholder="输入标签，用逗号分隔（如：界面, 图标, 蓝色）"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              className="wmfull px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
               disabled={uploading}
             />
           </div>
