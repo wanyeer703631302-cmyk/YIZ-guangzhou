@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const cloudinaryResult = await new Promise<cloudinary.UploadApiResponse>((resolve, reject) => {
+    const cloudinaryResult = await new Promise<any>((resolve, reject) => {
       cloudinary.uploader.upload_stream(
         { 
           folder: 'pincollect',
