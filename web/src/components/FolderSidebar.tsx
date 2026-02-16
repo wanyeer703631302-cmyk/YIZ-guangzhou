@@ -28,12 +28,11 @@ export function FolderSidebar({ selectedFolder, onSelectFolder }: FolderSidebarP
   const [newFolderName, setNewFolderName] = useState('')
 
   const fetchFolders = useCallback(async () => {
-    const userId = (session?.user as any)?.id
-    if (!userId) return
+    if (!session?.user?.id) return
 
     try {
       setLoading(true)
-      const response = await fetch(`/api/folders?userId=${userId}`)
+      const response = await fetch(`/api/folders?userId=${session.user.id}`)
       const result = await response.json()
 
       if (!result.success) {
@@ -47,22 +46,21 @@ export function FolderSidebar({ selectedFolder, onSelectFolder }: FolderSidebarP
     } finally {
       setLoading(false)
     }
-  }, [(session?.user as any)?.id])
+  }, [session?.user?.id])
 
   useEffect(() => {
     fetchFolders()
   }, [fetchFolders])
 
   const handleCreateFolder = async () => {
-    const userId = (session?.user as any)?.id
-    if (!newFolderName.trim() || !userId) return
+    if (!newFolderName.trim() || !session?.user?.id) return
 
     try {
       const response = await fetch('/api/folders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: userId,
+          userId: session.user.id,
           name: newFolderName.trim(),
         }),
       })

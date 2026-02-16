@@ -163,7 +163,7 @@ export default function Home() {
           {/* Content */}
           <MasonryGrid
             key={refreshKey}
-            userId={(session.user as any).id}
+            userId={session.user.id}
             folderId={selectedFolder}
             searchQuery={searchQuery}
             viewMode={viewMode}
