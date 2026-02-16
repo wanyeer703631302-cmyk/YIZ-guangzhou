@@ -1,15 +1,18 @@
-import { PrismaClient } from '@prisma/client'
 import { NextResponse } from 'next/server'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    const materials = await prisma.material.findMany({
-      orderBy: { createdAt: 'desc' }
+    const assets = await prisma.asset.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, username: true, avatarUrl: true } },
+        folder: { select: { id: true, name: true } },
+      },
     })
-    return NextResponse.json(materials)
-  } catch (error) {
-    return NextResponse.json({ error: '获取数据失败' }, { status: 500 })
+    return NextResponse.json({ success: true, data: assets })
+  } catch (error: any) {
+    console.error('获取素材失败:', error)
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 })
   }
 }
