@@ -1,58 +1,29 @@
 'use client'
 
+import { useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { useState, useEffect } from 'react'
 import { redirect } from 'next/navigation'
-import { UserTabs } from '@/components/UserTabs'
 import { FolderSidebar } from '@/components/FolderSidebar'
 import { MasonryGrid } from '@/components/MasonryGrid'
 import { UploadModal } from '@/components/UploadModal'
-import { Search, Plus, LayoutGrid, List, LogOut } from 'lucide-react'
+import { Search, Plus, LayoutGrid, List, LogOut, X } from 'lucide-react'
 import { signOut } from 'next-auth/react'
-
-const MOCK_USERS = [
-  { id: 'u1', name: '张三', avatar: 'https://i.pravatar.cc/150?u=1', count: 128 },
-  { id: 'u2', name: '设计师小王', avatar: 'https://i.pravatar.cc/150?u=2', count: 86 },
-  { id: 'u3', name: '产品经理', avatar: 'https://i.pravatar.cc/150?u=3', count: 245 },
-  { id: 'u4', name: '前端开发', avatar: 'https://i.pravatar.cc/150?u=4', count: 167 },
-  { id: 'u5', name: '运营小李', avatar: 'https://i.pravatar.cc/150?u=5', count: 43 },
-]
+import Image from 'next/image'
 
 export default function Home() {
   const { data: session, status } = useSession()
-  const [currentUserId, setCurrentUserId] = useState('u1')
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showUpload, setShowUpload] = useState(false)
-  const [items, setItems] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [isSearching, setIsSearching] = useState(false)
 
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
-        const baseUrl = apiUrl.replace(/\/$/, '')
-        const url = `${baseUrl}/api/assets${selectedFolder ? `?folderId=${selectedFolder}` : ''}`
-        
-        const response = await fetch(url)
-        if (response.ok) {
-          const result = await response.json()
-          if (result.success) {
-            setItems(result.data?.items || [])
-          }
-        }
-      } catch (error) {
-        console.error('获取素材失败:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    fetchItems()
-  }, [selectedFolder])
+  const handleRefresh = useCallback(() => {
+    setRefreshKey(prev => prev + 1)
+  }, [])
 
-  if (status === 'loading' || loading) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin" />
@@ -64,11 +35,16 @@ export default function Home() {
     redirect('/login')
   }
 
+  const userImage = session.user?.image
+  const userName = session.user?.name || session.user?.email?.split('@')[0] || '用户'
+  const userEmail = session.user?.email
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white">
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-[1920px] mx-auto px-4">
           <div className="flex items-center justify-between h-16">
+            {/* Logo */}
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -78,6 +54,7 @@ export default function Home() {
               <span className="text-xl font-bold">PinCollect</span>
             </div>
 
+            {/* Search */}
             <div className="flex-1 max-w-2xl mx-8">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -86,11 +63,20 @@ export default function Home() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="搜索素材、标签、文件夹..."
-                  className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-full focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full pl-10 pr-10 py-2 bg-gray-100 border-none rounded-full focus:outline-none focus:ring-2 focus:ring-gray-200 transition-all"
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full"
+                  >
+                    <X className="w-4 h-4 text-gray-400" />
+                  </button>
+                )}
               </div>
             </div>
 
+            {/* Actions */}
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowUpload(true)}
@@ -101,34 +87,32 @@ export default function Home() {
               </button>
 
               <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
-                <img
-                  src={session.user?.image || 'https://i.pravatar.cc/150?u=admin'}
-                  alt={session.user?.name || 'User'}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
+                {userImage ? (
+                  <Image
+                    src={userImage}
+                    alt={userName}
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white font-medium">
+                    {userName[0]?.toUpperCase()}
+                  </div>
+                )}
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium">{session.user?.name}</p>
-                  <p className="text-xs text-gray-500">{session.user?.email}</p>
+                  <p className="text-sm font-medium">{userName}</p>
+                  <p className="text-xs text-gray-500">{userEmail}</p>
                 </div>
                 <button
                   onClick={() => signOut({ callbackUrl: '/login' })}
-                  className="p-2 hover:bg-gray-100 rounded-full text-gray-500"
+                  className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors"
                   title="退出登录"
                 >
                   <LogOut className="w-5 h-5" />
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="border-t border-gray-100 bg-white/80 backdrop-blur-md">
-          <div className="max-w-[1920px] mx-auto px-4">
-            <UserTabs
-              users={MOCK_USERS}
-              currentUserId={currentUserId}
-              onSelectUser={setCurrentUserId}
-            />
           </div>
         </div>
       </header>
@@ -140,31 +124,46 @@ export default function Home() {
         />
 
         <main className="flex-1 p-6">
+          {/* Toolbar */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span>{items.length} 个素材</span>
-              <span className="w-1 h-1 bg-gray-300 rounded-full" />
-              <span>刚刚更新</span>
+              <span className="font-medium">
+                {selectedFolder ? '当前文件夹' : '全部素材'}
+              </span>
+              {searchQuery && (
+                <>
+                  <span className="w-1 h-1 bg-gray-300 rounded-full" />
+                  <span className="text-gray-500">搜索: {searchQuery}</span>
+                </>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:bg-gray-100'}`}
+                className={`p-2 rounded-lg transition-colors ${
+                  viewMode === 'grid' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:bg-gray-100'
+                }`}
+                title="网格视图"
               >
                 <LayoutGrid className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:bg-gray-100'}`}
+                className={`p-2 rounded-lg transition-colors ${
+                  viewMode === 'list' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:bg-gray-100'
+                }`}
+                title="列表视图"
               >
                 <List className="w-5 h-5" />
               </button>
             </div>
           </div>
 
+          {/* Content */}
           <MasonryGrid
-            userId={currentUserId}
+            key={refreshKey}
+            userId={session.user.id}
             folderId={selectedFolder}
             searchQuery={searchQuery}
             viewMode={viewMode}
@@ -172,13 +171,15 @@ export default function Home() {
         </main>
       </div>
 
+      {/* Upload Modal */}
       {showUpload && (
-        <UploadModal 
-          onClose={() => {
+        <UploadModal
+          onClose={() => setShowUpload(false)}
+          folderId={selectedFolder}
+          onUploadSuccess={() => {
+            handleRefresh()
             setShowUpload(false)
-            window.location.reload()
-          }} 
-          folderId={selectedFolder} 
+          }}
         />
       )}
     </div>

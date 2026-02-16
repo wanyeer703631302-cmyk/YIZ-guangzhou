@@ -1,8 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client'; // 引入 Prisma
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -17,38 +15,70 @@ export async function POST(request: Request) {
     const title = formData.get('title') as string;
     const tags = formData.get('tags') as string;
     const folderId = formData.get('folderId') as string;
+    const userId = formData.get('userId') as string;
 
     if (!file) {
-      return NextResponse.json({ message: '未找到文件' }, { status: 400 });
+      return NextResponse.json({ success: false, message: '未找到文件' }, { status: 400 });
+    }
+
+    if (!userId) {
+      return NextResponse.json({ success: false, message: '未登录' }, { status: 401 });
     }
 
     // 1. 上传到 Cloudinary
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const cloudinaryResult: any = await new Promise((resolve, reject) => {
+    const cloudinaryResult = await new Promise<cloudinary.UploadApiResponse>((resolve, reject) => {
       cloudinary.uploader.upload_stream(
-        { folder: 'pincollect' },
+        { 
+          folder: 'pincollect',
+          resource_type: 'image',
+        },
         (error, result) => {
-          if (error) reject(error);
+          if (error || !result) reject(error);
           else resolve(result);
         }
       ).end(buffer);
     });
 
-    // 2. 关键步骤：将 Cloudinary 返回的 url 存入数据库
-    const newMaterial = await prisma.material.create({
+    // 2. 存入数据库 (使用统一的 Asset 模型)
+    const newAsset = await prisma.asset.create({
       data: {
-        title: title || file.name,
-        url: cloudinaryResult.secure_url, // 这里存入云端地址
-        tags: tags || '',
+        title: title || file.name.replace(/\.[^/.]+$/, ''),
+        storageUrl: cloudinaryResult.secure_url,
+        thumbnailUrl: cloudinaryResult.secure_url.replace('/upload/', '/upload/c_thumb,w_400/'),
+        originalUrl: cloudinaryResult.secure_url,
+        width: cloudinaryResult.width,
+        height: cloudinaryResult.height,
+        fileSize: cloudinaryResult.bytes,
+        mimeType: cloudinaryResult.format,
+        userId: userId,
         folderId: folderId || null,
       },
     });
 
-    return NextResponse.json(newMaterial); // 返回数据库里的这条新记录
+    // 3. 处理标签
+    if (tags) {
+      const tagNames = tags.split(',').map(t => t.trim()).filter(Boolean);
+      for (const tagName of tagNames) {
+        const tag = await prisma.tag.upsert({
+          where: { userId_name: { userId, name: tagName } },
+          create: { userId, name: tagName },
+          update: { usageCount: { increment: 1 } },
+        });
+        await prisma.assetTag.create({
+          data: { assetId: newAsset.id, tagId: tag.id },
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true, data: newAsset });
   } catch (error: any) {
-    console.error('上传并保存失败:', error);
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    console.error('上传失败:', error);
+    return NextResponse.json(
+      { success: false, message: error.message || '上传失败' }, 
+      { status: 500 }
+    );
   }
 }

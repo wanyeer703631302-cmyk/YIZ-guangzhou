@@ -2,13 +2,13 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['picsum.photos', 'i.pravatar.cc', 'res.cloudinary.com', 'yiz-guangzhou-production.up.railway.app'] 
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
+    remotePatterns: [
+      { protocol: 'https', hostname: 'picsum.photos' },
+      { protocol: 'https', hostname: 'i.pravatar.cc' },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      { protocol: 'https', hostname: '*.railway.app' },
+    ],
+    minimumCacheTTL: 60,
   },
   async rewrites() {
     return [

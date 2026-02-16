@@ -110,12 +110,3 @@ model AssetTag {
   @@id([assetId, tagId])
   @@map("asset_tags")
 }
-
-model Material {
-  id        String   @id @default(cuid())
-  title     String
-  url       String   // 存放 Cloudinary 的 secure_url
-  tags      String?
-  folderId  String?
-  createdAt DateTime @default(now())
-}
