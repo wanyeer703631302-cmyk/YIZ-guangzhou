@@ -102,7 +102,7 @@ export function FolderSidebar({ selectedFolder, onSelectFolder }: FolderSidebarP
           }`}
         >
           <span className="flex items-center gap-2">
-            <Folder className="w-4 h-4" /
+            <Folder className="w-4 h-4" />
             全部素材
           </span>
           <span className="text-xs opacity-70">{totalCount}</span>
@@ -163,8 +163,7 @@ export function FolderSidebar({ selectedFolder, onSelectFolder }: FolderSidebarP
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                <span className="flex items-center gap-2 truncate"
-003e
+                <span className="flex items-center gap-2 truncate">
                   <span
                     className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: folder.color }}
