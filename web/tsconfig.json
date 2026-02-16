@@ -15,6 +15,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "baseUrl": ".",           // ← 添加这一行
     "plugins": [{ "name": "next" }],
     "paths": { "@/*": ["./src/*"] }
   },
