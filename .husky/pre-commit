@@ -1,0 +1,22 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 正在检查 web 目录..."
+cd web || exit 1
+
+echo "📦 检查 package.json..."
+if [ ! -f package.json ]; then
+  echo "❌ package.json 不存在"
+  exit 1
+fi
+
+echo "🔍 运行 TypeScript 类型检查..."
+npx tsc --noEmit || exit 1
+
+echo "✅ 类型检查通过！"
+
+# 可选：运行 ESLint
+# echo "🧹 运行 ESLint..."
+# npm run lint || exit 1
+
+echo "🚀 准备提交..."

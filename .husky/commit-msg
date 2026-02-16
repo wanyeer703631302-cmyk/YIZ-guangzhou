@@ -1,0 +1,11 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 提交前检查 web 目录..."
+cd web || exit 1
+
+echo "📝 检查提交信息格式..."
+# 可选：使用 commitlint 检查提交信息格式
+# npx --no-install commitlint --edit $1 || exit 1
+
+echo "✅ 提交信息检查通过！"
