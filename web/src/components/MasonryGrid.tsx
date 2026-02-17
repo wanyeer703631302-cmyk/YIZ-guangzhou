@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Heart, Download, ExternalLink, Loader2 } from 'lucide-react'
+import { Heart, Star, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import { useSession } from 'next-auth/react'
 
@@ -39,6 +39,12 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, onItemCou
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [likedAssets, setLikedAssets] = useState<Set<string>>(new Set())
+  const [favoritedAssets, setFavoritedAssets] = useState<Set<string>>(new Set())
+  const [collections, setCollections] = useState<{ id: string; name: string; itemCount?: number }[]>([])
+  const [collectionAsset, setCollectionAsset] = useState<Asset | null>(null)
+  const [collectionIds, setCollectionIds] = useState<Set<string>>(new Set())
+  const [newCollectionName, setNewCollectionName] = useState('')
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
@@ -90,6 +96,32 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, onItemCou
     fetchAssets(1, false)
   }, [folderId, searchQuery, fetchAssets])
 
+  useEffect(() => {
+    const fetchLikesAndFavorites = async () => {
+      if (!session?.user?.id) return
+      try {
+        const [likesRes, favoritesRes, collectionsRes] = await Promise.all([
+          fetch('/api/likes?page=1&limit=200'),
+          fetch('/api/favorites?page=1&limit=200'),
+          fetch('/api/collections')
+        ])
+        const likesResult = await likesRes.json()
+        const favoritesResult = await favoritesRes.json()
+        const collectionsResult = await collectionsRes.json()
+        if (likesResult.success) {
+          setLikedAssets(new Set((likesResult.data.items || []).map((i: any) => i.assetId)))
+        }
+        if (favoritesResult.success) {
+          setFavoritedAssets(new Set((favoritesResult.data.items || []).map((i: any) => i.assetId)))
+        }
+        if (collectionsResult.success) {
+          setCollections(collectionsResult.data || [])
+        }
+      } catch (e) {}
+    }
+    fetchLikesAndFavorites()
+  }, [session?.user?.id])
+
   // 无限滚动
   useEffect(() => {
     if (observerRef.current) {
@@ -116,11 +148,20 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, onItemCou
     return () => observerRef.current?.disconnect()
   }, [hasMore, loadingMore, fetchAssets])
 
+  useEffect(() => {
+    if (!selectedAsset) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedAsset(null)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [selectedAsset])
+
   const handleLike = useCallback(async (assetId: string) => {
     if (!session?.user?.id) return
     const isLiked = likedAssets.has(assetId)
     try {
-      const res = await fetch('/api/favorites', {
+      const res = await fetch('/api/likes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assetId }),
@@ -136,21 +177,88 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, onItemCou
     } catch (e) {}
   }, [session?.user?.id, likedAssets])
 
-  const handleDownload = useCallback(async (url: string, filename: string) => {
+  const handleFavorite = useCallback(async (assetId: string) => {
+    if (!session?.user?.id) return
+    const isFavorited = favoritedAssets.has(assetId)
     try {
-      const response = await fetch(url)
-      const blob = await response.blob()
-      const downloadUrl = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.URL.revokeObjectURL(downloadUrl)
-    } catch (err) {
-      console.error('下载失败:', err)
-    }
+      const res = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assetId }),
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.message)
+      setFavoritedAssets(prev => {
+        const next = new Set(prev)
+        if (isFavorited) next.delete(assetId)
+        else next.add(assetId)
+        return next
+      })
+    } catch (e) {}
+  }, [session?.user?.id, favoritedAssets])
+
+  const openCollections = useCallback(async (asset: Asset) => {
+    setCollectionAsset(asset)
+    try {
+      const res = await fetch(`/api/collections/items?assetId=${asset.id}`)
+      const result = await res.json()
+      if (result.success) {
+        setCollectionIds(new Set(result.data || []))
+      }
+    } catch (e) {}
+  }, [])
+
+  const toggleCollection = useCallback(async (collectionId: string) => {
+    if (!collectionAsset) return
+    const isIn = collectionIds.has(collectionId)
+    try {
+      const res = await fetch('/api/collections/items', {
+        method: isIn ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collectionId, assetId: collectionAsset.id }),
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.message)
+      setCollectionIds(prev => {
+        const next = new Set(prev)
+        if (isIn) next.delete(collectionId)
+        else next.add(collectionId)
+        return next
+      })
+    } catch (e) {}
+  }, [collectionAsset, collectionIds])
+
+  const createCollection = useCallback(async () => {
+    if (!newCollectionName.trim()) return
+    try {
+      const res = await fetch('/api/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCollectionName.trim() }),
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.message)
+      setCollections(prev => [result.data, ...prev])
+      setNewCollectionName('')
+    } catch (e) {}
+  }, [newCollectionName])
+
+  const deleteCollection = useCallback(async (id: string) => {
+    try {
+      const res = await fetch('/api/collections', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.message)
+      setCollections(prev => prev.filter(c => c.id !== id))
+      setCollectionIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    } catch (e) {}
   }, [])
 
   if (loading) {
@@ -190,62 +298,62 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, onItemCou
     )
   }
 
-  if (viewMode === 'list') {
-    return (
-      <div className="space-y-4">
-        {assets.map((asset) => (
-          <div key={asset.id} className="flex gap-4 bg-white p-4 rounded-xl hover:shadow-md transition-shadow">
-            <div className="relative w-48 h-32 flex-shrink-0">
-              <Image
-                src={asset.thumbnailUrl || asset.storageUrl}
-                alt={asset.title || ''}
-                fill
-                className="object-cover rounded-lg"
-                sizes="192px"
-              />
+  const content = viewMode === 'list' ? (
+    <div className="space-y-4">
+      {assets.map((asset) => (
+        <div
+          key={asset.id}
+          className="flex gap-4 bg-white p-4 rounded-xl hover:shadow-md transition-shadow cursor-zoom-in"
+          onClick={() => setSelectedAsset(asset)}
+        >
+          <div className="relative w-48 h-32 flex-shrink-0">
+            <Image
+              src={asset.thumbnailUrl || asset.storageUrl}
+              alt={asset.title || ''}
+              fill
+              className="object-cover rounded-lg"
+              sizes="192px"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 truncate">{asset.title || '未命名'}</h3>
+            <p className="text-sm text-gray-500 mt-1 line-clamp-2">{asset.description}</p>
+            <div className="flex items-center gap-2 mt-2">
+              {asset.user.avatarUrl ? (
+                <Image 
+                  src={asset.user.avatarUrl} 
+                  alt={asset.user.username} 
+                  width={24} 
+                  height={24} 
+                  className="rounded-full" 
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-gray-200" />
+              )}
+              <span className="text-sm text-gray-500">{asset.user.username}</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 truncate">{asset.title || '未命名'}</h3>
-              <p className="text-sm text-gray-500 mt-1 line-clamp-2">{asset.description}</p>
-              <div className="flex items-center gap-2 mt-2">
-                {asset.user.avatarUrl ? (
-                  <Image 
-                    src={asset.user.avatarUrl} 
-                    alt={asset.user.username} 
-                    width={24} 
-                    height={24} 
-                    className="rounded-full" 
-                  />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-gray-200" />
-                )}
-                <span className="text-sm text-gray-500">{asset.user.username}</span>
-              </div>
-              <div className="flex gap-2 mt-3">
-                {asset.tags.slice(0, 5).map((tag) => (
-                  <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-                    {tag}
-                  </span>
-                ))}
-              </div>
+            <div className="flex gap-2 mt-3">
+              {asset.tags.slice(0, 5).map((tag) => (
+                <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                  {tag}
+                </span>
+              ))}
             </div>
           </div>
-        ))}
-        <div ref={loadMoreRef} className="h-10 flex items-center justify-center">
-          {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-gray-400" />}
         </div>
+      ))}
+      <div ref={loadMoreRef} className="h-10 flex items-center justify-center">
+        {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-gray-400" />}
       </div>
-    )
-  }
-
-  // Grid 模式 - 瀑布流布局
-  return (
+    </div>
+  ) : (
     <div className="masonry-grid">
       {assets.map((asset, index) => {
         const aspectRatio = asset.width && asset.height 
           ? asset.width / asset.height 
           : 4/3
         const isLiked = likedAssets.has(asset.id)
+        const isFavorited = favoritedAssets.has(asset.id)
 
         return (
           <div
@@ -255,7 +363,10 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, onItemCou
               '--masonry-aspect': aspectRatio 
             } as React.CSSProperties}
           >
-            <div className="relative overflow-hidden rounded-2xl bg-gray-100">
+            <div
+              className="relative overflow-hidden rounded-2xl bg-gray-100"
+              onClick={() => setSelectedAsset(asset)}
+            >
               <Image
                 src={asset.thumbnailUrl || asset.storageUrl}
                 alt={asset.title || ''}
@@ -268,40 +379,27 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, onItemCou
 
               <div className="absolute inset-0 image-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
                 <div className="flex justify-between items-end gap-2">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleLike(asset.id)
-                    }}
-                    className={`px-4 py-2 rounded-full font-semibold text-sm transition-colors flex items-center gap-1 ${
-                      isLiked 
-                        ? 'bg-red-500 text-white' 
-                        : 'bg-red-500 text-white hover:bg-red-600'
-                    }`}
-                  >
-                    <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-                    {isLiked ? '已收藏' : '收藏'}
-                  </button>
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleDownload(asset.storageUrl, `${asset.title || 'image'}.jpg`)
+                        handleLike(asset.id)
                       }}
-                      className="bg-white/20 backdrop-blur-md p-2 rounded-full hover:bg-white/30 transition-colors text-white"
-                      title="下载"
+                      className="bg-white/20 backdrop-blur-md w-10 h-10 rounded-full hover:bg-white/30 transition-colors flex items-center justify-center"
+                      title="点赞"
                     >
-                      <Download className="w-4 h-4" />
+                      <Heart className={`w-5 h-5 ${isLiked ? 'text-red-500 fill-red-500 scale-110' : 'text-white'}`} />
                     </button>
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        window.open(asset.storageUrl, '_blank')
+                        handleFavorite(asset.id)
+                        openCollections(asset)
                       }}
-                      className="bg-white/20 backdrop-blur-md p-2 rounded-full hover:bg-white/30 transition-colors text-white"
-                      title="在新窗口打开"
+                      className="bg-white/20 backdrop-blur-md w-10 h-10 rounded-full hover:bg-white/30 transition-colors flex items-center justify-center"
+                      title="收藏"
                     >
-                      <ExternalLink className="w-4 h-4" />
+                      <Star className={`w-5 h-5 ${isFavorited ? 'text-yellow-400 fill-yellow-400 scale-110' : 'text-white'}`} />
                     </button>
                   </div>
                 </div>
@@ -347,5 +445,90 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, onItemCou
         )}
       </div>
     </div>
+  )
+
+  return (
+    <>
+      {content}
+      {selectedAsset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6" onClick={() => setSelectedAsset(null)}>
+          <div className="max-w-6xl w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="relative w-full rounded-2xl overflow-hidden bg-black">
+              <img
+                src={selectedAsset.storageUrl}
+                alt={selectedAsset.title || ''}
+                className="w-full h-auto max-h-[80vh] object-contain"
+              />
+            </div>
+            <div className="mt-4 flex items-center justify-between text-white">
+              <div>
+                <div className="text-lg font-semibold">{selectedAsset.title || '未命名'}</div>
+                <div className="text-sm text-white/70">{selectedAsset.user.username}</div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleLike(selectedAsset.id)}
+                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"
+                >
+                  <Heart className={`w-5 h-5 ${likedAssets.has(selectedAsset.id) ? 'text-red-500 fill-red-500 scale-110' : 'text-white'}`} />
+                </button>
+                <button
+                  onClick={() => {
+                    handleFavorite(selectedAsset.id)
+                    openCollections(selectedAsset)
+                  }}
+                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"
+                >
+                  <Star className={`w-5 h-5 ${favoritedAssets.has(selectedAsset.id) ? 'text-yellow-400 fill-yellow-400 scale-110' : 'text-white'}`} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {collectionAsset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={() => setCollectionAsset(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="text-lg font-semibold mb-3">收藏到分类</div>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {collections.length === 0 && (
+                <div className="text-sm text-gray-500">暂无分类</div>
+              )}
+              {collections.map((c) => (
+                <div key={c.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
+                  <button
+                    className="flex items-center gap-2 text-sm"
+                    onClick={() => toggleCollection(c.id)}
+                  >
+                    <span className={`w-4 h-4 rounded border flex items-center justify-center ${collectionIds.has(c.id) ? 'bg-black border-black' : 'border-gray-300'}`}>
+                      {collectionIds.has(c.id) && <span className="w-2 h-2 bg-white rounded-sm" />}
+                    </span>
+                    <span>{c.name}</span>
+                    {typeof c.itemCount === 'number' && <span className="text-xs text-gray-400">({c.itemCount})</span>}
+                  </button>
+                  <button className="text-xs text-gray-400 hover:text-gray-600" onClick={() => deleteCollection(c.id)}>
+                    删除
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex gap-2">
+              <input
+                value={newCollectionName}
+                onChange={(e) => setNewCollectionName(e.target.value)}
+                placeholder="新建分类"
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              />
+              <button
+                onClick={createCollection}
+                className="px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800"
+              >
+                创建
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

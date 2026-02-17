@@ -1,28 +1,34 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
 
 export default function CollectPage() {
   const { data: session } = useSession()
+  const searchParams = useSearchParams()
   const [imageUrl, setImageUrl] = useState('')
   const [title, setTitle] = useState('')
   const [tags, setTags] = useState('')
   const [folderId, setFolderId] = useState<string | null>(null)
   const [folders, setFolders] = useState<{id: string, name: string}[]>([])
   const [message, setMessage] = useState<string | null>(null)
+  const autoCollectRef = useRef(false)
 
   useEffect(() => {
     const fetchFolders = async () => {
       if (!session?.user?.id) return
-      const res = await fetch(`/api/folders?userId=${session.user.id}`)
+      const res = await fetch('/api/folders')
       const result = await res.json()
       if (result.success) setFolders(result.data.map((f: any) => ({ id: f.id, name: f.name })))
     }
     fetchFolders()
   }, [session?.user?.id])
 
-  const bookmarklet = `javascript:(function(){var u=prompt('输入图片地址'); if(!u) return; fetch('${typeof window !== 'undefined' ? window.location.origin : ''}/api/collect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageUrl:u})}).then(r=>r.json()).then(x=>{alert(x.success?'采集成功':'采集失败: '+x.message)}).catch(e=>alert('采集失败: '+e.message));})();`
+  useEffect(() => {
+    const url = searchParams.get('imageUrl')
+    if (url) setImageUrl(url)
+  }, [searchParams])
 
   const handleCollect = async () => {
     setMessage(null)
@@ -44,13 +50,21 @@ export default function CollectPage() {
     }
   }
 
+  useEffect(() => {
+    const url = searchParams.get('imageUrl')
+    const auto = searchParams.get('auto')
+    if (url && auto === '1' && session?.user?.id && !autoCollectRef.current) {
+      autoCollectRef.current = true
+      handleCollect()
+    }
+  }, [searchParams, session?.user?.id])
+
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">采集 Bookmarklet</h1>
-      <p className="text-sm text-gray-600 mb-4">将下面的链接拖到浏览器书签栏，即可在任何页面一键采集图片 URL 到素材库。</p>
-      <a className="inline-block px-3 py-2 rounded bg-black text-white text-sm mb-6" href={bookmarklet}>拖我到书签栏</a>
+      <h1 className="text-2xl font-bold mb-4">采集入口</h1>
+      <p className="text-sm text-gray-600 mb-6">使用浏览器扩展在外部网站点击图片即可自动带入到此页面。</p>
 
-      <h2 className="text-xl font-semibold mb-3">手动采集</h2>
+      <h2 className="text-xl font-semibold mb-3">采集确认</h2>
       <div className="space-y-3">
         <input value={imageUrl} onChange={(e)=>setImageUrl(e.target.value)} placeholder="图片 URL" className="w-full px-3 py-2 border rounded" />
         <input value={title} onChange={(e)=>setTitle(e.target.value)} placeholder="标题（可选）" className="w-full px-3 py-2 border rounded" />

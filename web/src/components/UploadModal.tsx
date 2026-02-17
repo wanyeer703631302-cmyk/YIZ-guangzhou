@@ -37,7 +37,7 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
     const fetchFolders = async () => {
       if (!session?.user?.id) return
       try {
-        const res = await fetch(`/api/folders?userId=${session.user.id}`)
+        const res = await fetch('/api/folders')
         const result = await res.json()
         if (result.success) {
           setAvailableFolders(result.data.map((f: any) => ({ id: f.id, name: f.name })))

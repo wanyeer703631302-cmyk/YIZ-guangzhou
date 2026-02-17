@@ -9,17 +9,19 @@ export default function LoginPage() {
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/'
   
-  const [email, setEmail] = useState('admin@pincollect.local')
+  const [mode, setMode] = useState<'password' | 'code'>('password')
+  const [identifier, setIdentifier] = useState('admin@pincollect.local')
   const [password, setPassword] = useState('admin123')
+  const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [sending, setSending] = useState(false)
 
-  // 检查是否有错误参数
   useEffect(() => {
     const errorParam = searchParams.get('error')
     if (errorParam) {
       const errorMessages: Record<string, string> = {
-        'CredentialsSignin': '邮箱或密码错误',
+        'CredentialsSignin': '登录失败',
         'SessionRequired': '请先登录',
         'Default': '登录失败，请重试'
       }
@@ -31,17 +33,17 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-
     try {
       const result = await signIn('credentials', {
-        email,
-        password,
+        identifier,
+        password: mode === 'password' ? password : undefined,
+        code: mode === 'code' ? code : undefined,
+        mode,
         redirect: false,
         callbackUrl
       })
-
       if (result?.error) {
-        setError('邮箱或密码错误')
+        setError('登录失败，请检查输入')
         setLoading(false)
       } else if (result?.ok) {
         router.push(callbackUrl)
@@ -50,6 +52,25 @@ export default function LoginPage() {
     } catch (err) {
       setError('系统错误，请重试')
       setLoading(false)
+    }
+  }
+
+  const sendCode = async () => {
+    if (!identifier.trim()) return
+    setSending(true)
+    setError('')
+    try {
+      const res = await fetch('/api/auth/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, purpose: 'login' })
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.message)
+    } catch (e: any) {
+      setError(e.message || '发送验证码失败')
+    } finally {
+      setSending(false)
     }
   }
 
@@ -66,28 +87,66 @@ export default function LoginPage() {
           <p className="text-gray-500 mt-2">企业素材管理系统</p>
         </div>
 
+        <div className="flex gap-2 mb-4">
+          <button
+            className={`px-3 py-1.5 rounded-full text-sm ${mode === 'password' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'}`}
+            onClick={() => setMode('password')}
+          >
+            密码登录
+          </button>
+          <button
+            className={`px-3 py-1.5 rounded-full text-sm ${mode === 'code' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'}`}
+            onClick={() => setMode('code')}
+          >
+            验证码登录
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">邮箱/手机号/用户名</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
               required
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">密码</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-              required
-            />
-          </div>
+          {mode === 'password' ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">密码</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                required
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">验证码</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={sendCode}
+                  disabled={sending}
+                  className="px-3 py-2 bg-gray-900 text-white rounded-lg text-sm disabled:opacity-50"
+                >
+                  {sending ? '发送中...' : '发送验证码'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg">

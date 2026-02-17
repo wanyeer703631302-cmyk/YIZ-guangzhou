@@ -12,10 +12,16 @@ model User {
   email             String    @unique
   username          String    @unique
   passwordHash      String?   @map("password_hash")
+  phone             String?   @unique @map("phone")
+  bio               String?   @map("bio")
   role              String    @default("member")
   authProvider      String    @default("local") @map("auth_provider")
   authProviderId    String?   @map("auth_provider_id")
   avatarUrl         String?   @map("avatar_url")
+  failedLoginCount  Int       @default(0) @map("failed_login_count")
+  lockUntil         DateTime? @map("lock_until")
+  lastLoginAt       DateTime? @map("last_login_at")
+  lastLoginIp       String?   @map("last_login_ip")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -31,6 +37,7 @@ model User {
   collections Collection[]
   sessionsAuth Session[]
   assetVersions AssetVersion[]
+  loginEvents LoginEvent[]
 
   @@map("users")
 }
@@ -251,6 +258,33 @@ model AssetVersion {
   user  User  @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
   @@map("asset_versions")
+}
+
+model VerificationCode {
+  id         String   @id @default(uuid())
+  identifier String   @map("identifier")
+  purpose    String   @map("purpose")
+  codeHash   String   @map("code_hash")
+  expiresAt  DateTime @map("expires_at")
+  attempts   Int      @default(0) @map("attempts")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([identifier, purpose])
+  @@map("verification_codes")
+}
+
+model LoginEvent {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  ip        String?  @map("ip")
+  userAgent String?  @map("user_agent")
+  eventType String   @map("event_type")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("login_events")
 }
 
 enum AssetStatus {

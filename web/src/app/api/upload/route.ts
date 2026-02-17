@@ -19,19 +19,40 @@ export async function POST(request: Request) {
     const tags = formData.get('tags') as string;
     const folderId = formData.get('folderId') as string;
     const session = await getServerSession(authOptions);
-    const userId = session?.user?.id as string;
+    const email = session?.user?.email as string | undefined;
+    const sessionUserId = session?.user?.id as string | undefined;
 
     if (!file) {
       return NextResponse.json({ success: false, message: '未找到文件' }, { status: 400 });
     }
 
-    if (!userId) {
+    if (!email && !sessionUserId) {
       return NextResponse.json({ success: false, message: '未登录' }, { status: 401 });
     }
     
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
       return NextResponse.json({ success: false, message: 'Cloudinary 未配置，请检查环境变量' }, { status: 500 });
     }
+
+    const user = await prisma.user.upsert({
+      where: email ? { email } : { id: sessionUserId as string },
+      update: {},
+      create: {
+        email: email || `user_${sessionUserId}@pincollect.local`,
+        username: email ? email.split('@')[0] : `user_${(sessionUserId as string).slice(0, 8)}`,
+        avatarUrl: (session?.user as any)?.image || null,
+        authProvider: email ? 'oauth' : 'local'
+      }
+    });
+
+    if (folderId) {
+      const folder = await prisma.folder.findFirst({ where: { id: folderId, userId: user.id } });
+      if (!folder) {
+        return NextResponse.json({ success: false, message: '文件夹不存在或无权限' }, { status: 403 });
+      }
+    }
+
+    const userId = user.id;
 
     // 1. 上传到 Cloudinary
     const arrayBuffer = await file.arrayBuffer();
@@ -63,6 +84,7 @@ export async function POST(request: Request) {
         mimeType: (file as any).type || cloudinaryResult.format,
         userId: userId,
         folderId: folderId || null,
+        sourceType: 'upload'
       },
     });
 

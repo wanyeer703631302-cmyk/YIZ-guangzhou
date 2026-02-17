@@ -32,7 +32,7 @@ export function FolderSidebar({ selectedFolder, onSelectFolder }: FolderSidebarP
 
     try {
       setLoading(true)
-      const response = await fetch(`/api/folders?userId=${session.user.id}`)
+      const response = await fetch('/api/folders')
       const result = await response.json()
 
       if (!result.success) {
@@ -60,7 +60,6 @@ export function FolderSidebar({ selectedFolder, onSelectFolder }: FolderSidebarP
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: session.user.id,
           name: newFolderName.trim(),
         }),
       })

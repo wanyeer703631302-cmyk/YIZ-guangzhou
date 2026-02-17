@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     const userId = searchParams.get('userId');
     const folderId = searchParams.get('folderId');
     const searchQuery = searchParams.get('q');
+    const tag = searchParams.get('tag');
   const status = searchParams.get('status');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -26,6 +27,9 @@ export async function GET(request: Request) {
         { description: { contains: searchQuery, mode: 'insensitive' } },
         { tags: { some: { tag: { name: { contains: searchQuery, mode: 'insensitive' } } } } },
       ];
+    }
+    if (tag) {
+      where.tags = { some: { tag: { name: { equals: tag, mode: 'insensitive' } } } };
     }
 
     const [assets, total] = await Promise.all([
