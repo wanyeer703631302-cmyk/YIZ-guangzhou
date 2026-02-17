@@ -18,16 +18,28 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        if (credentials?.email === 'admin@pincollect.local' && credentials?.password === 'admin123') {
-          return {
-            id: '1',
-            name: '管理员',
-            email: 'admin@pincollect.local',
-            role: 'admin',
-            image: 'https://i.pravatar.cc/150?u=admin'
-          } as any
-        }
-        return null
+          const email = credentials?.email
+          const password = credentials?.password
+          if (email === 'admin@pincollect.local' && password === 'admin123') {
+            const user = await prisma.user.upsert({
+              where: { email },
+              update: { role: 'admin' },
+              create: {
+                email,
+                username: '管理员',
+                role: 'admin',
+                avatarUrl: 'https://i.pravatar.cc/150?u=admin'
+              }
+            })
+            return {
+              id: user.id,
+              name: user.username,
+              email: user.email,
+              role: user.role,
+              image: user.avatarUrl || undefined
+            } as any
+          }
+          return null
       }
     })
   ],
