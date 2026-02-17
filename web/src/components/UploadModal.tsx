@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { X, UploadCloud, Loader2, Check, AlertCircle } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
@@ -24,8 +24,28 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
   const [files, setFiles] = useState<UploadFile[]>([])
   const [tags, setTags] = useState('')
   const [isUploading, setIsUploading] = useState(false)
+  const [availableFolders, setAvailableFolders] = useState<{id: string, name: string}[]>([])
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(folderId)
 
   const generateId = () => Math.random().toString(36).substring(2, 9)
+
+  useEffect(() => {
+    setSelectedFolderId(folderId)
+  }, [folderId])
+
+  useEffect(() => {
+    const fetchFolders = async () => {
+      if (!session?.user?.id) return
+      try {
+        const res = await fetch(`/api/folders?userId=${session.user.id}`)
+        const result = await res.json()
+        if (result.success) {
+          setAvailableFolders(result.data.map((f: any) => ({ id: f.id, name: f.name })))
+        }
+      } catch {}
+    }
+    fetchFolders()
+  }, [session?.user?.id])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -68,7 +88,7 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
 
     const formData = new FormData()
     formData.append('file', uploadFile.file)
-    formData.append('folderId', folderId || '')
+    formData.append('folderId', selectedFolderId || '')
     formData.append('tags', tags)
     formData.append('title', uploadFile.file.name.replace(/\.[^/.]+$/, ''))
 
@@ -79,8 +99,18 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || '上传失败')
+        let text = ''
+        try {
+          text = await response.text()
+          const json = JSON.parse(text)
+          throw new Error(json.message || '上传失败')
+        } catch (e: any) {
+          if (text) {
+            const plain = text.replace(/<[^>]*>/g, '').trim()
+            throw new Error(plain || '上传失败')
+          }
+          throw new Error(e?.message || '上传失败')
+        }
       }
 
       return true
@@ -195,6 +225,27 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
               />
               <p className="text-xs text-gray-400 mt-1">这些标签会应用到所有上传的图片</p>
+            </div>
+          )}
+
+          {/* 选择文件夹 */}
+          {files.length > 0 && (
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                保存到文件夹
+              </label>
+              <select
+                value={selectedFolderId || ''}
+                onChange={(e) => setSelectedFolderId(e.target.value || null)}
+                disabled={isUploading}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="">不分类</option>
+                {availableFolders.map((f) => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">如果未选择，将保存为未分类</p>
             </div>
           )}
 
