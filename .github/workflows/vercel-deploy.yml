@@ -1,0 +1,33 @@
+name: Vercel Deploy via Hook
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web/**'
+      - '.github/workflows/vercel-deploy.yml'
+
+concurrency:
+  group: vercel-deploy-main
+  cancel-in-progress: true
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show commit info
+        run: |
+          echo "Branch: $GITHUB_REF"
+          echo "SHA: $GITHUB_SHA"
+      - name: Trigger Vercel Deploy Hook
+        env:
+          DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "Missing GitHub secret: VERCEL_DEPLOY_HOOK"
+            exit 1
+          fi
+          echo "Calling Vercel deploy hook..."
+          curl -s -X POST "$DEPLOY_HOOK" -H "Accept: application/json" || exit 1
+          echo "Deploy hook invoked."

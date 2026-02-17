@@ -5,7 +5,8 @@
   "scripts": {
     "install": "cd server && npm install",
     "build": "cd server && npm run build",
-    "start": "cd server && npm start"
+    "start": "cd server && npm start",
+    "deploy:vercel": "if [ -z \\\"$VERCEL_DEPLOY_HOOK\\\" ]; then echo \\\"Missing VERCEL_DEPLOY_HOOK env\\\" && exit 1; else curl -s -X POST \\\"$VERCEL_DEPLOY_HOOK\\\" -H \\\"Accept: application/json\\\"; fi"
   },
   "engines": {
     "node": "18.x"
