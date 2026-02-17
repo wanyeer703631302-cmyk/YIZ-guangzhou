@@ -6,7 +6,7 @@
     "dev": "next dev",
     "prebuild": "prisma generate",
     "build": "next build",
-    "postbuild": "prisma migrate deploy",
+    "postbuild": "prisma db push",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
