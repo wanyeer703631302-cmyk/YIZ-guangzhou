@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function GET(request: Request) {
   try {
@@ -55,6 +57,35 @@ export async function GET(request: Request) {
     console.error('获取素材失败:', error);
     return NextResponse.json(
       { success: false, message: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id as string;
+    if (!userId) {
+      return NextResponse.json({ success: false, message: '未登录' }, { status: 401 });
+    }
+    const body = await request.json();
+    const assetId = body?.assetId as string;
+    if (!assetId) {
+      return NextResponse.json({ success: false, message: '缺少素材ID' }, { status: 400 });
+    }
+    const asset = await prisma.asset.findUnique({ where: { id: assetId } });
+    if (!asset) {
+      return NextResponse.json({ success: false, message: '素材不存在' }, { status: 404 });
+    }
+    if (asset.userId !== userId) {
+      return NextResponse.json({ success: false, message: '无删除权限' }, { status: 403 });
+    }
+    await prisma.asset.delete({ where: { id: assetId } });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error.message || '删除失败' },
       { status: 500 }
     );
   }

@@ -1,9 +1,16 @@
-// @ts-nocheck
-import NextAuth from 'next-auth'
+import NextAuth, { type NextAuthOptions } from 'next-auth'
+import GoogleProvider from 'next-auth/providers/google'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import { PrismaAdapter } from '@next-auth/prisma-adapter'
+import { prisma } from '@/lib/prisma'
 
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || ''
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -27,24 +34,27 @@ const handler = NextAuth({
   pages: { signIn: '/login', error: '/login' },
   session: { strategy: 'jwt' },
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = user.role;
+        // @ts-ignore
+        token.id = user.id || token.sub
+        // @ts-ignore
+        token.role = user.role || 'user'
       }
-      return token;
+      return token
     },
-    async session({ session, token }: any) {
+    async session({ session, token }) {
       if (session?.user) {
-        // 使用非常保险的写法
-        const userWithData = session.user as any;
-        const tokenWithData = token as any;
-        userWithData.id = tokenWithData.id || tokenWithData.sub;
-        userWithData.role = tokenWithData.role || 'user';
+        // @ts-ignore
+        session.user.id = token.id || token.sub
+        // @ts-ignore
+        session.user.role = token.role || 'user'
       }
-      return session;
+      return session
     }
-  }
-})
+  },
+  secret: process.env.NEXTAUTH_SECRET
+}
 
+const handler = NextAuth(authOptions)
 export { handler as GET, handler as POST }

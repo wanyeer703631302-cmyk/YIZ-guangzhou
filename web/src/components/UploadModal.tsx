@@ -71,7 +71,6 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
     formData.append('folderId', folderId || '')
     formData.append('tags', tags)
     formData.append('title', uploadFile.file.name.replace(/\.[^/.]+$/, ''))
-    formData.append('userId', session.user.id)
 
     try {
       const response = await fetch('/api/upload', {

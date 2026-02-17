@@ -1,6 +1,8 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -15,7 +17,8 @@ export async function POST(request: Request) {
     const title = formData.get('title') as string;
     const tags = formData.get('tags') as string;
     const folderId = formData.get('folderId') as string;
-    const userId = formData.get('userId') as string;
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id as string;
 
     if (!file) {
       return NextResponse.json({ success: false, message: '未找到文件' }, { status: 400 });
@@ -23,6 +26,10 @@ export async function POST(request: Request) {
 
     if (!userId) {
       return NextResponse.json({ success: false, message: '未登录' }, { status: 401 });
+    }
+    
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      return NextResponse.json({ success: false, message: 'Cloudinary 未配置，请检查环境变量' }, { status: 500 });
     }
 
     // 1. 上传到 Cloudinary
@@ -47,12 +54,12 @@ export async function POST(request: Request) {
       data: {
         title: title || file.name.replace(/\.[^/.]+$/, ''),
         storageUrl: cloudinaryResult.secure_url,
-        thumbnailUrl: cloudinaryResult.secure_url.replace('/upload/', '/upload/c_thumb,w_400/'),
+        thumbnailUrl: cloudinaryResult.secure_url.replace('/upload/', '/upload/f_auto,q_auto,c_thumb,w_400/'),
         originalUrl: cloudinaryResult.secure_url,
         width: cloudinaryResult.width,
         height: cloudinaryResult.height,
         fileSize: cloudinaryResult.bytes,
-        mimeType: cloudinaryResult.format,
+        mimeType: (file as any).type || cloudinaryResult.format,
         userId: userId,
         folderId: folderId || null,
       },
