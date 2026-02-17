@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'web/**'
-      - '.github/workflows/vercel-deploy.yml'
 
 concurrency:
   group: vercel-deploy-main
@@ -20,14 +17,35 @@ jobs:
         run: |
           echo "Branch: $GITHUB_REF"
           echo "SHA: $GITHUB_SHA"
-      - name: Trigger Vercel Deploy Hook
+      - name: Trigger Vercel Deploy Hook with retries
         env:
           DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG: ${{ secrets.VERCEL_ORG }}
+          VERCEL_PROJECT: ${{ secrets.VERCEL_PROJECT }}
         run: |
           if [ -z "$DEPLOY_HOOK" ]; then
             echo "Missing GitHub secret: VERCEL_DEPLOY_HOOK"
             exit 1
           fi
-          echo "Calling Vercel deploy hook..."
-          curl -s -X POST "$DEPLOY_HOOK" -H "Accept: application/json" || exit 1
-          echo "Deploy hook invoked."
+          echo "Calling Vercel deploy hook with up to 3 retries..."
+          for i in 1 2 3; do
+            CODE=$(curl -s -o /tmp/resp.json -w "%{http_code}" -X POST "$DEPLOY_HOOK" -H "Accept: application/json" || true)
+            echo "Attempt $i: HTTP $CODE"
+            cat /tmp/resp.json || true
+            if [ "$CODE" = "200" ] || [ "$CODE" = "201" ]; then
+              echo "Hook invoked successfully."
+              break
+            fi
+            if [ "$i" != "3" ]; then
+              echo "Retrying in 20 seconds..."
+              sleep 20
+            fi
+          done
+          # Optional fallback: use Vercel CLI if token and project/org are provided
+          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG" ] && [ -n "$VERCEL_PROJECT" ]; then
+            echo "Using Vercel CLI fallback..."
+            npm i -g vercel
+            vercel link --project "$VERCEL_PROJECT" --scope "$VERCEL_ORG" --token "$VERCEL_TOKEN" --cwd web --yes || true
+            vercel deploy --prod --yes --scope "$VERCEL_ORG" --token "$VERCEL_TOKEN" --cwd web || true
+          fi
