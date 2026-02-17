@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     const userId = searchParams.get('userId');
     const folderId = searchParams.get('folderId');
     const searchQuery = searchParams.get('q');
+  const status = searchParams.get('status');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
 
@@ -17,6 +18,7 @@ export async function GET(request: Request) {
     
     if (userId) where.userId = userId;
     if (folderId) where.folderId = folderId;
+  if (status) where.status = status;
     
     if (searchQuery) {
       where.OR = [
