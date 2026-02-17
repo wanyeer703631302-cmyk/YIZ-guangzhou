@@ -30,6 +30,7 @@ model User {
   organizationsOwned Organization[] @relation("OrganizationOwner")
   collections Collection[]
   sessionsAuth Session[]
+  assetVersions AssetVersion[]
 
   @@map("users")
 }
@@ -82,6 +83,7 @@ model Asset {
   fileSize     Int?     @map("file_size")
   mimeType     String?  @map("mime_type")
   sourceType   String?  @map("source_type")
+  status       AssetStatus @default(pending)
   createdAt    DateTime @default(now()) @map("created_at")
 
   user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -90,6 +92,7 @@ model Asset {
   likes Like[]
   favorites Favorite[]
   collectionItems CollectionItem[]
+  versions AssetVersion[]
 
   @@map("assets")
 }
@@ -235,4 +238,23 @@ model CollectionItem {
 
   @@id([collectionId, assetId])
   @@map("collection_items")
+}
+
+model AssetVersion {
+  id        String   @id @default(uuid())
+  assetId   String   @map("asset_id")
+  storageUrl String  @map("storage_url")
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@map("asset_versions")
+}
+
+enum AssetStatus {
+  pending
+  approved
+  rejected
 }

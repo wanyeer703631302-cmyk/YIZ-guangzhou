@@ -116,17 +116,25 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, onItemCou
     return () => observerRef.current?.disconnect()
   }, [hasMore, loadingMore, fetchAssets])
 
-  const handleLike = useCallback((assetId: string) => {
-    setLikedAssets(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(assetId)) {
-        newSet.delete(assetId)
-      } else {
-        newSet.add(assetId)
-      }
-      return newSet
-    })
-  }, [])
+  const handleLike = useCallback(async (assetId: string) => {
+    if (!session?.user?.id) return
+    const isLiked = likedAssets.has(assetId)
+    try {
+      const res = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assetId }),
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.message)
+      setLikedAssets(prev => {
+        const next = new Set(prev)
+        if (isLiked) next.delete(assetId)
+        else next.add(assetId)
+        return next
+      })
+    } catch (e) {}
+  }, [session?.user?.id, likedAssets])
 
   const handleDownload = useCallback(async (url: string, filename: string) => {
     try {
