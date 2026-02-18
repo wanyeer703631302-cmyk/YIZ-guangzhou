@@ -27,17 +27,41 @@ export async function POST(request: Request) {
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
       return NextResponse.json({ success: false, message: 'Cloudinary 未配置，请检查环境变量' }, { status: 500 })
     }
+
+    // Database retry helper
+    const dbOp = async <T>(fn: () => Promise<T>, retries = 3): Promise<T> => {
+      let lastError;
+      for (let i = 0; i < retries; i++) {
+        try {
+          return await fn();
+        } catch (e: any) {
+          lastError = e;
+          console.error(`Database operation failed (attempt ${i + 1}/${retries}):`, e.message);
+          if (e.message?.includes('Server has closed the connection') || e.message?.includes('Connection lost')) {
+            await new Promise(r => setTimeout(r, 500 * (i + 1)));
+            continue;
+          }
+          throw e;
+        }
+      }
+      throw lastError;
+    };
+
     const result = await cloudinary.uploader.upload(sourceUrl, {
       folder: 'pincollect/versions',
       resource_type: 'image',
     })
-    const version = await prisma.assetVersion.create({
-      data: {
-        assetId,
-        storageUrl: result.secure_url,
-        createdBy: userId,
-      }
+    
+    const version = await dbOp(async () => {
+      return prisma.assetVersion.create({
+        data: {
+          assetId,
+          storageUrl: result.secure_url,
+          createdBy: userId,
+        }
+      })
     })
+
     return NextResponse.json({ success: true, data: version })
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message || '创建版本失败' }, { status: 500 })

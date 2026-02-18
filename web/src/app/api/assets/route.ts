@@ -36,21 +36,42 @@ export async function GET(request: Request) {
       where.likes = { some: {} }
     }
 
-    const [assets, total] = await Promise.all([
-      prisma.asset.findMany({
-        where,
-        include: {
-          user: { select: { id: true, username: true, avatarUrl: true } },
-          tags: { include: { tag: { select: { name: true, color: true } } } },
-        },
-        orderBy: liked && ['1','true','yes'].includes(liked)
-          ? [{ likes: { _count: 'desc' } }, { createdAt: 'desc' }]
-          : { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.asset.count({ where }),
-    ]);
+    // Database retry helper
+    const dbOp = async <T>(fn: () => Promise<T>, retries = 3): Promise<T> => {
+      let lastError;
+      for (let i = 0; i < retries; i++) {
+        try {
+          return await fn();
+        } catch (e: any) {
+          lastError = e;
+          console.error(`Database operation failed (attempt ${i + 1}/${retries}):`, e.message);
+          if (e.message?.includes('Server has closed the connection') || e.message?.includes('Connection lost')) {
+            await new Promise(r => setTimeout(r, 500 * (i + 1)));
+            continue;
+          }
+          throw e;
+        }
+      }
+      throw lastError;
+    };
+
+    const [assets, total] = await dbOp(async () => {
+      return Promise.all([
+        prisma.asset.findMany({
+          where,
+          include: {
+            user: { select: { id: true, username: true, avatarUrl: true } },
+            tags: { include: { tag: { select: { name: true, color: true } } } },
+          },
+          orderBy: liked && ['1','true','yes'].includes(liked)
+            ? [{ likes: { _count: 'desc' } }, { createdAt: 'desc' }]
+            : { createdAt: 'desc' },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        prisma.asset.count({ where }),
+      ])
+    })
 
     return NextResponse.json({
       success: true,

@@ -19,16 +19,39 @@ export async function POST(request: Request) {
     if (!email && !sessionUserId) {
       return NextResponse.json({ success: false, message: '未登录' }, { status: 401 })
     }
-    const user = await prisma.user.upsert({
-      where: email ? { email } : { id: sessionUserId as string },
-      update: {},
-      create: {
-        email: email || `user_${sessionUserId}@pincollect.local`,
-        username: email ? email.split('@')[0] : `user_${(sessionUserId as string).slice(0, 8)}`,
-        avatarUrl: (session?.user as any)?.image || null,
-        authProvider: email ? 'oauth' : 'local'
+
+    // Database retry helper
+    const dbOp = async <T>(fn: () => Promise<T>, retries = 3): Promise<T> => {
+      let lastError;
+      for (let i = 0; i < retries; i++) {
+        try {
+          return await fn();
+        } catch (e: any) {
+          lastError = e;
+          console.error(`Database operation failed (attempt ${i + 1}/${retries}):`, e.message);
+          if (e.message?.includes('Server has closed the connection') || e.message?.includes('Connection lost')) {
+            await new Promise(r => setTimeout(r, 500 * (i + 1)));
+            continue;
+          }
+          throw e;
+        }
       }
+      throw lastError;
+    };
+
+    const user = await dbOp(async () => {
+      return prisma.user.upsert({
+        where: email ? { email } : { id: sessionUserId as string },
+        update: {},
+        create: {
+          email: email || `user_${sessionUserId}@pincollect.local`,
+          username: email ? email.split('@')[0] : `user_${(sessionUserId as string).slice(0, 8)}`,
+          avatarUrl: (session?.user as any)?.image || null,
+          authProvider: email ? 'oauth' : 'local'
+        }
+      })
     })
+
     const body = await request.json()
     const imageUrl = body?.imageUrl as string
     const title = body?.title as string | undefined
@@ -44,30 +67,35 @@ export async function POST(request: Request) {
       folder: 'pincollect',
       resource_type: 'image',
     })
-    const newAsset = await prisma.asset.create({
-      data: {
-        title: title || result.original_filename,
-        storageUrl: result.secure_url,
-        thumbnailUrl: result.secure_url.replace('/upload/', '/upload/f_auto,q_auto,c_thumb,w_400/'),
-        originalUrl: imageUrl,
-        width: result.width,
-        height: result.height,
-        fileSize: result.bytes,
-        mimeType: result.format,
-        userId: user.id,
-        folderId: folderId || null,
-        sourceType: 'extension',
-      },
+    const newAsset = await dbOp(async () => {
+      return prisma.asset.create({
+        data: {
+          title: title || result.original_filename,
+          storageUrl: result.secure_url,
+          thumbnailUrl: result.secure_url.replace('/upload/', '/upload/f_auto,q_auto,c_thumb,w_400/'),
+          originalUrl: imageUrl,
+          width: result.width,
+          height: result.height,
+          fileSize: result.bytes,
+          mimeType: result.format,
+          userId: user.id,
+          folderId: folderId || null,
+          sourceType: 'extension',
+        },
+      })
     })
+
     if (tags) {
       const tagNames = tags.split(',').map((t: string) => t.trim()).filter(Boolean)
       for (const tagName of tagNames) {
-        const tag = await prisma.tag.upsert({
-          where: { userId_name: { userId: user.id, name: tagName } },
-          create: { userId: user.id, name: tagName },
-          update: { usageCount: { increment: 1 } },
+        await dbOp(async () => {
+          const tag = await prisma.tag.upsert({
+            where: { userId_name: { userId: user.id, name: tagName } },
+            create: { userId: user.id, name: tagName },
+            update: { usageCount: { increment: 1 } },
+          })
+          await prisma.assetTag.create({ data: { assetId: newAsset.id, tagId: tag.id } })
         })
-        await prisma.assetTag.create({ data: { assetId: newAsset.id, tagId: tag.id } })
       }
     }
     return NextResponse.json({ success: true, data: newAsset })
