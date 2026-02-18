@@ -29,6 +29,7 @@ interface MasonryGridProps {
   viewMode: 'grid' | 'list'
   likedOnly?: boolean
   levelTag?: string
+  sourceType?: 'assets' | 'likes' | 'favorites' | 'hang'
   onItemCountChange?: (count: number) => void
 }
 
@@ -165,7 +166,7 @@ const MasonryItem = ({
   )
 }
 
-export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly, levelTag, onItemCountChange }: MasonryGridProps) {
+export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly, levelTag, sourceType = 'assets', onItemCountChange }: MasonryGridProps) {
   const { data: session } = useSession()
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
@@ -215,17 +216,35 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
       if (likedOnly) params.append('liked', 'true')
       if (levelTag) params.append('tag', levelTag)
 
-      const response = await fetch(`/api/assets?${params}`)
+      let url = `/api/assets?${params}`
+      if (sourceType === 'hang') {
+        params.delete('userId')
+        if (session?.user?.id) {
+          params.append('userId', session.user.id)
+        }
+        url = `/api/home/hang?${params}`
+      } else if (sourceType === 'likes') {
+        url = `/api/likes?${params}`
+      } else if (sourceType === 'favorites') {
+        url = `/api/favorites?${params}`
+      }
+
+      const response = await fetch(url)
       const result = await response.json()
 
       if (!result.success) {
         throw new Error(result.message)
       }
 
+      let newItems = result.data.items
+      if (sourceType === 'likes' || sourceType === 'favorites') {
+        newItems = newItems.map((item: any) => item.asset).filter((a: any) => a)
+      }
+
       if (isLoadMore) {
-        setAssets(prev => [...prev, ...result.data.items])
+        setAssets(prev => [...prev, ...newItems])
       } else {
-        setAssets(result.data.items)
+        setAssets(newItems)
       }
       
       setHasMore(result.data.page < result.data.totalPages)
@@ -239,7 +258,7 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [folderId, searchQuery, userId, likedOnly, levelTag, session?.user?.id, onItemCountChange])
+  }, [folderId, searchQuery, userId, likedOnly, levelTag, session?.user?.id, onItemCountChange, sourceType])
 
   // 初始加载和筛选条件变化时重置
   useEffect(() => {

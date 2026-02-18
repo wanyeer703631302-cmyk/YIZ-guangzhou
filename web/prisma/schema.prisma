@@ -18,6 +18,7 @@ model User {
   authProvider      String    @default("local") @map("auth_provider")
   authProviderId    String?   @map("auth_provider_id")
   avatarUrl         String?   @map("avatar_url")
+  coverUrl          String?   @map("cover_url")
   failedLoginCount  Int       @default(0) @map("failed_login_count")
   lockUntil         DateTime? @map("lock_until")
   lastLoginAt       DateTime? @map("last_login_at")
