@@ -63,6 +63,7 @@ export function Navbar({ user, searchQuery = '', onSearchChange, onUploadClick }
           <div className="flex items-center gap-3">
             {onUploadClick && (
               <button
+                id="upload-trigger"
                 onClick={onUploadClick}
                 className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full font-medium hover:bg-gray-800 transition-colors"
               >

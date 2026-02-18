@@ -67,10 +67,40 @@ export default function UserProfilePage() {
     router.push(`/user/${userId}?${newParams.toString()}`)
   }
 
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1)
-    fetchProfile() // Refresh stats too
+  const [messages, setMessages] = useState<any[]>([])
+  const [loadingMessages, setLoadingMessages] = useState(false)
+
+  const fetchMessages = useCallback(async () => {
+    try {
+      setLoadingMessages(true)
+      const res = await fetch('/api/user/messages')
+      const result = await res.json()
+      if (result.success) {
+        setMessages(result.data.items)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoadingMessages(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'messages' && profile?.isOwner) {
+      fetchMessages()
+    }
+  }, [activeTab, profile?.isOwner, fetchMessages])
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
+
 
   if (status === 'loading' || loading) {
     return (
@@ -78,6 +108,12 @@ export default function UserProfilePage() {
         <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
       </div>
     )
+  }
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1)
+    fetchProfile()
+    if (activeTab === 'messages') fetchMessages()
   }
 
   if (error || !profile) {
@@ -161,10 +197,24 @@ export default function UserProfilePage() {
             />
 
             {/* Content Grid */}
-            <div className="min-h-[500px]">
+            <div className="min-h-[500px] mt-6">
                 {activeTab === 'messages' ? (
-                    <div className="p-8 text-center text-gray-500">
-                        消息中心功能开发中...
+                    <div className="max-w-4xl mx-auto space-y-4">
+                        {loadingMessages ? (
+                            <div className="text-center py-12 text-gray-500">加载消息中...</div>
+                        ) : messages.length === 0 ? (
+                            <div className="text-center py-12 text-gray-500">暂无消息</div>
+                        ) : (
+                            messages.map((msg) => (
+                                <div key={msg.id} className={`p-4 rounded-xl border ${msg.isRead ? 'bg-white border-gray-100' : 'bg-blue-50 border-blue-100'}`}>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="font-semibold text-gray-900">{msg.title}</h3>
+                                        <span className="text-xs text-gray-500">{formatDate(msg.createdAt)}</span>
+                                    </div>
+                                    <p className="text-gray-600 text-sm">{msg.content}</p>
+                                </div>
+                            ))
+                        )}
                     </div>
                 ) : (
                     <MasonryGrid 

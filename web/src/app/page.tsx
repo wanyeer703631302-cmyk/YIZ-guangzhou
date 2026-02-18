@@ -29,16 +29,10 @@ export default function Home() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch('/api/stats')
+        const res = await fetch('/api/home/users')
         const result = await res.json()
         if (result.success) {
-          const users = (result.data.activeUsers || []).map((u: any) => ({
-            id: u.id,
-            name: u.name,
-            avatar: u.avatar || '',
-            count: u.count || 0
-          }))
-          setTabsUsers(users)
+          setTabsUsers(result.data)
         }
       } catch {}
     }

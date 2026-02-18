@@ -503,6 +503,24 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
   }
 
   if (assets.length === 0) {
+    if (sourceType === 'hang') {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <div className="w-16 h-16 mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+            <Star className="w-8 h-8 text-yellow-400" />
+          </div>
+          <p className="text-lg">暂无夯内容</p>
+          <p className="text-sm mt-1 mb-4">快去上传第一张作品吧</p>
+          <button
+            onClick={() => document.getElementById('upload-trigger')?.click()}
+            className="px-6 py-2 bg-black text-white rounded-full font-medium hover:bg-gray-800 transition-colors"
+          >
+            上传作品
+          </button>
+        </div>
+      )
+    }
+
     return (
       <div className="flex flex-col items-center justify-center py-20 text-gray-400">
         <div className="w-16 h-16 mb-4 rounded-full bg-gray-100 flex items-center justify-center">
