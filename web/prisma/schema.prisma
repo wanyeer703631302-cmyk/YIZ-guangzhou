@@ -22,6 +22,8 @@ model User {
   lockUntil         DateTime? @map("lock_until")
   lastLoginAt       DateTime? @map("last_login_at")
   lastLoginIp       String?   @map("last_login_ip")
+  isDisplayed       Boolean   @default(false) @map("is_displayed")
+  displayOrder      Int       @default(0) @map("display_order")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -38,6 +40,7 @@ model User {
   sessionsAuth Session[]
   assetVersions AssetVersion[]
   loginEvents LoginEvent[]
+  messages    Message[]
 
   @@map("users")
   @@index([phone])
@@ -286,6 +289,20 @@ model LoginEvent {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("login_events")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String?
+  content   String
+  type      String   @default("system")
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
 }
 
 enum AssetStatus {

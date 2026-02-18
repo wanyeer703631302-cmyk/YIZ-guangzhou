@@ -1,41 +1,99 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { dbOp } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import bcrypt from 'bcryptjs'
+
 export const runtime = 'nodejs'
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions)
-    const meId = session?.user?.id as string | undefined
-    const meRole = (session as any)?.user?.role as string | undefined
-    if (!meId || meRole !== 'admin') {
-      return NextResponse.json({ success: false, message: '无权限' }, { status: 403 })
+    const userRole = (session?.user as any)?.role
+
+    if (userRole !== 'admin') {
+      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
     }
-    const body = await request.json()
-    const email = (body?.email || '').trim()
-    const username = (body?.username || '').trim()
-    const password = (body?.password || '').trim()
-    if (!email || !username || !password) {
-      return NextResponse.json({ success: false, message: '缺少必要字段' }, { status: 400 })
+
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '20')
+    const displayable = searchParams.get('displayable')
+    const search = searchParams.get('search')
+
+    const where: any = {}
+    if (displayable === 'true') where.isDisplayed = true
+    if (displayable === 'false') where.isDisplayed = false
+    if (search) {
+      where.OR = [
+        { username: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
+      ]
     }
-    const exists = await prisma.user.findFirst({ where: { OR: [{ email }, { username }] } })
-    if (exists) {
-      return NextResponse.json({ success: false, message: '邮箱或用户名已存在' }, { status: 409 })
-    }
-    const hashed = await bcrypt.hash(password, 10)
-    const user = await prisma.user.create({
+
+    const [users, total] = await dbOp(async () => {
+      return Promise.all([
+        prisma.user.findMany({
+          where,
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+            isDisplayed: true,
+            email: true,
+            role: true
+          },
+          orderBy: { createdAt: 'desc' },
+          skip: (page - 1) * limit,
+          take: limit
+        }),
+        prisma.user.count({ where })
+      ])
+    })
+
+    return NextResponse.json({
+      success: true,
       data: {
-        email,
-        username,
-        passwordHash: hashed,
-        role: 'member',
-        authProvider: 'local'
+        items: users,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
       }
     })
-    return NextResponse.json({ success: true, data: { id: user.id, email: user.email, username: user.username } })
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.message || '创建失败' }, { status: 500 })
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 })
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const session = await getServerSession(authOptions)
+    const userRole = (session?.user as any)?.role
+
+    if (userRole !== 'admin') {
+      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { userIds, isDisplayed } = body
+
+    if (!Array.isArray(userIds) || typeof isDisplayed !== 'boolean') {
+      return NextResponse.json({ success: false, message: 'Invalid input' }, { status: 400 })
+    }
+
+    await dbOp(async () => {
+      return prisma.user.updateMany({
+        where: { id: { in: userIds } },
+        data: { isDisplayed }
+      })
+    })
+
+    // TODO: Refresh Redis cache here if Redis was implemented
+    // await redis.del('home:users')
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 })
   }
 }
