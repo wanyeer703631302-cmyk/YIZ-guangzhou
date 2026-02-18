@@ -104,7 +104,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">邮箱/手机号/用户名</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">邮箱/用户名</label>
             <input
               type="text"
               value={identifier}
@@ -162,6 +162,16 @@ export default function LoginPage() {
             {loading ? '登录中...' : '登录'}
           </button>
         </form>
+
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => signIn('google', { callbackUrl })}
+            className="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+          >
+            使用 Google 登录
+          </button>
+        </div>
 
         <div className="mt-6 text-center text-sm text-gray-500">
           <p>默认账号: admin@pincollect.local</p>
