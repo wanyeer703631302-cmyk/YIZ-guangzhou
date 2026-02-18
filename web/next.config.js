@@ -8,7 +8,8 @@ const nextConfig = {
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: '*.railway.app' },
     ],
-    minimumCacheTTL: 60,
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 3600,
   },
   async rewrites() {
     const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://yiz-guangzhou-production.up.railway.app'

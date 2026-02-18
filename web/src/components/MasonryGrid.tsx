@@ -32,6 +32,139 @@ interface MasonryGridProps {
   onItemCountChange?: (count: number) => void
 }
 
+const optimizeCloudinaryUrl = (url: string) => {
+  if (!url || !url.includes('res.cloudinary.com')) return url
+  if (url.includes('f_auto') && url.includes('q_auto')) return url
+  return url.replace('/upload/', '/upload/f_auto,q_auto/')
+}
+
+const MasonryItem = ({ 
+  asset, 
+  index, 
+  isLiked, 
+  isFavorited, 
+  onSelect, 
+  onHeartClick, 
+  onFavoriteClick 
+}: {
+  asset: Asset
+  index: number
+  isLiked: boolean
+  isFavorited: boolean
+  onSelect: (asset: Asset) => void
+  onHeartClick: (e: React.MouseEvent, asset: Asset) => void
+  onFavoriteClick: (e: React.MouseEvent, asset: Asset) => void
+}) => {
+  const [isError, setIsError] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
+
+  const currentLevel = asset.tags.find(t => ['夯','顶级','人上人'].includes(t))
+  const displayIsLiked = isLiked || !!currentLevel
+  const aspectRatio = asset.width && asset.height ? asset.width / asset.height : 4/3
+  
+  const rawSrc = asset.thumbnailUrl || asset.storageUrl
+  const optimizedSrc = optimizeCloudinaryUrl(rawSrc)
+
+  const src = retryCount > 0 
+    ? `${optimizedSrc}${optimizedSrc.includes('?') ? '&' : '?'}retry=${retryCount}`
+    : optimizedSrc
+
+  return (
+    <div
+      className="masonry-item group relative cursor-zoom-in"
+      style={{ '--masonry-aspect': aspectRatio } as React.CSSProperties}
+    >
+      <div
+        className="relative overflow-hidden rounded-2xl bg-gray-100"
+        onClick={() => onSelect(asset)}
+      >
+        {!isError ? (
+          <Image
+            src={src}
+            alt={asset.title || ''}
+            width={asset.width || 400}
+            height={asset.height || 300}
+            className="w-full h-auto block transition-transform duration-300 group-hover:scale-105"
+            loading={index < 8 ? 'eager' : 'lazy'}
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            onError={() => setIsError(true)}
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-200 text-gray-500 z-10">
+             <span className="text-xs mb-2">加载失败</span>
+             <button 
+               onClick={(e) => {
+                 e.stopPropagation()
+                 setIsError(false)
+                 setRetryCount(c => c + 1)
+               }}
+               className="px-3 py-1 bg-white rounded-full text-xs hover:bg-gray-50"
+             >
+               重试
+             </button>
+          </div>
+        )}
+
+        <div className="absolute inset-0 image-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+          <div className="flex justify-between items-end gap-2">
+            <div className="flex gap-2">
+              <button
+                onClick={(e) => onHeartClick(e, asset)}
+                className="bg-white/20 backdrop-blur-md w-10 h-10 rounded-full hover:bg-white/30 transition-colors flex items-center justify-center"
+                title="点赞/评级"
+              >
+                <Heart className={`w-5 h-5 ${
+                  currentLevel === '夯' ? 'text-red-500 fill-red-500 scale-110' :
+                  currentLevel === '顶级' ? 'text-yellow-400 fill-yellow-400 scale-110' :
+                  currentLevel === '人上人' ? 'text-purple-500 fill-purple-500 scale-110' :
+                  displayIsLiked ? 'text-red-500 fill-red-500 scale-110' : 'text-white'
+                }`} />
+              </button>
+              <button
+                onClick={(e) => onFavoriteClick(e, asset)}
+                className="bg-white/20 backdrop-blur-md w-10 h-10 rounded-full hover:bg-white/30 transition-colors flex items-center justify-center"
+                title="收藏"
+              >
+                <Star className={`w-5 h-5 ${isFavorited ? 'text-yellow-400 fill-yellow-400 scale-110' : 'text-white'}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 px-1">
+        <h3 className="font-semibold text-sm text-gray-900 line-clamp-1">{asset.title || '未命名'}</h3>
+        <div className="flex items-center gap-2 mt-1">
+          {asset.user.avatarUrl ? (
+            <Image 
+              src={asset.user.avatarUrl} 
+              alt={asset.user.username} 
+              width={20} 
+              height={20} 
+              className="rounded-full" 
+            />
+          ) : (
+            <div className="w-5 h-5 rounded-full bg-gray-200" />
+          )}
+          <span className="text-xs text-gray-500">{asset.user.username}</span>
+        </div>
+        {asset.tags.length > 0 && (
+          <div className="flex gap-1 mt-2 flex-wrap">
+            {asset.tags.slice(0, 3).map((tag) => (
+              <span key={tag} className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">
+                {tag}
+              </span>
+            ))}
+            {asset.tags.length > 3 && (
+              <span className="px-2 py-0.5 text-gray-400 text-xs">+{asset.tags.length - 3}</span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly, levelTag, onItemCountChange }: MasonryGridProps) {
   const { data: session } = useSession()
   const [assets, setAssets] = useState<Asset[]>([])
@@ -47,10 +180,23 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
   const [collectionIds, setCollectionIds] = useState<Set<string>>(new Set())
   const [newCollectionName, setNewCollectionName] = useState('')
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
-  const [showLevelPicker, setShowLevelPicker] = useState(false)
+  const [pickerState, setPickerState] = useState<{id: string, x: number, y: number, currentLevel?: string} | null>(null)
   const [selectedAssetLevel, setSelectedAssetLevel] = useState<string | null>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  // Close picker on scroll, resize, or outside click
+  useEffect(() => {
+    const close = () => setPickerState(null)
+    window.addEventListener('scroll', close)
+    window.addEventListener('resize', close)
+    window.addEventListener('click', close)
+    return () => {
+      window.removeEventListener('scroll', close)
+      window.removeEventListener('resize', close)
+      window.removeEventListener('click', close)
+    }
+  }, [])
 
   const fetchAssets = useCallback(async (pageNum: number, isLoadMore = false) => {
     if (!session?.user?.id) return
@@ -162,6 +308,46 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [selectedAsset])
+
+  const handleLevelSelect = async (level: string) => {
+    if (!pickerState) return
+    const assetId = pickerState.id
+    
+    // Optimistic update
+    setAssets(prev => prev.map(a => {
+      if (a.id === assetId) {
+        const newTags = a.tags.filter(t => !['夯','顶级','人上人'].includes(t))
+        newTags.push(level)
+        return { ...a, tags: newTags }
+      }
+      return a
+    }))
+    
+    // Also update selectedAsset if open
+    if (selectedAsset?.id === assetId) {
+      setSelectedAsset(prev => {
+        if (!prev) return null
+        const newTags = prev.tags.filter(t => !['夯','顶级','人上人'].includes(t))
+        newTags.push(level)
+        return { ...prev, tags: newTags }
+      })
+      setSelectedAssetLevel(level)
+    }
+
+    setPickerState(null)
+
+    try {
+      await fetch('/api/assets/level', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assetId, level })
+      })
+      // Also ensure it's in liked list if not already
+      if (!likedAssets.has(assetId)) {
+        setLikedAssets(prev => new Set(prev).add(assetId))
+      }
+    } catch (e) {}
+  }
 
   const handleLike = useCallback(async (assetId: string) => {
     if (!session?.user?.id) return
@@ -361,96 +547,31 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
     </div>
   ) : (
     <div className="masonry-grid">
-      {assets.map((asset, index) => {
-        const aspectRatio = asset.width && asset.height 
-          ? asset.width / asset.height 
-          : 4/3
-        const isLiked = likedAssets.has(asset.id)
-        const isFavorited = favoritedAssets.has(asset.id)
-
-        return (
-          <div
-            key={asset.id}
-            className="masonry-item group relative cursor-zoom-in"
-            style={{ 
-              '--masonry-aspect': aspectRatio 
-            } as React.CSSProperties}
-          >
-            <div
-              className="relative overflow-hidden rounded-2xl bg-gray-100"
-              onClick={() => setSelectedAsset(asset)}
-            >
-              <Image
-                src={asset.thumbnailUrl || asset.storageUrl}
-                alt={asset.title || ''}
-                width={asset.width || 400}
-                height={asset.height || 300}
-                className="w-full h-auto block transition-transform duration-300 group-hover:scale-105"
-                loading={index < 8 ? 'eager' : 'lazy'}
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              />
-
-              <div className="absolute inset-0 image-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                <div className="flex justify-between items-end gap-2">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleLike(asset.id)
-                      }}
-                      className="bg-white/20 backdrop-blur-md w-10 h-10 rounded-full hover:bg-white/30 transition-colors flex items-center justify-center"
-                      title="点赞"
-                    >
-                      <Heart className={`w-5 h-5 ${isLiked ? 'text-red-500 fill-red-500 scale-110' : 'text-white'}`} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleFavorite(asset.id)
-                        openCollections(asset)
-                      }}
-                      className="bg-white/20 backdrop-blur-md w-10 h-10 rounded-full hover:bg-white/30 transition-colors flex items-center justify-center"
-                      title="收藏"
-                    >
-                      <Star className={`w-5 h-5 ${isFavorited ? 'text-yellow-400 fill-yellow-400 scale-110' : 'text-white'}`} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-3 px-1">
-              <h3 className="font-semibold text-sm text-gray-900 line-clamp-1">{asset.title || '未命名'}</h3>
-              <div className="flex items-center gap-2 mt-1">
-                {asset.user.avatarUrl ? (
-                  <Image 
-                    src={asset.user.avatarUrl} 
-                    alt={asset.user.username} 
-                    width={20} 
-                    height={20} 
-                    className="rounded-full" 
-                  />
-                ) : (
-                  <div className="w-5 h-5 rounded-full bg-gray-200" />
-                )}
-                <span className="text-xs text-gray-500">{asset.user.username}</span>
-              </div>
-              {asset.tags.length > 0 && (
-                <div className="flex gap-1 mt-2 flex-wrap">
-                  {asset.tags.slice(0, 3).map((tag) => (
-                    <span key={tag} className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">
-                      {tag}
-                    </span>
-                  ))}
-                  {asset.tags.length > 3 && (
-                    <span className="px-2 py-0.5 text-gray-400 text-xs">+{asset.tags.length - 3}</span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      })}
+      {assets.map((asset, index) => (
+        <MasonryItem
+          key={asset.id}
+          asset={asset}
+          index={index}
+          isLiked={likedAssets.has(asset.id)}
+          isFavorited={favoritedAssets.has(asset.id)}
+          onSelect={setSelectedAsset}
+          onHeartClick={(e, asset) => {
+            e.stopPropagation()
+            const rect = e.currentTarget.getBoundingClientRect()
+            setPickerState({
+              id: asset.id,
+              x: rect.left + rect.width / 2,
+              y: rect.top,
+              currentLevel: asset.tags.find(t => ['夯','顶级','人上人'].includes(t))
+            })
+          }}
+          onFavoriteClick={(e, asset) => {
+            e.stopPropagation()
+            handleFavorite(asset.id)
+            openCollections(asset)
+          }}
+        />
+      ))}
       <div ref={loadMoreRef} className="col-span-full h-20 flex items-center justify-center">
         {loadingMore && <Loader2 className="w-6 h-6 animate-spin text-gray-400" />}
         {!hasMore && assets.length > 0 && (
@@ -480,7 +601,16 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
               </div>
               <div className="flex gap-3">
                 <button
-                  onClick={() => setShowLevelPicker((v)=>!v)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    setPickerState({
+                      id: selectedAsset.id,
+                      x: rect.left + rect.width / 2,
+                      y: rect.top,
+                      currentLevel: selectedAssetLevel || undefined
+                    })
+                  }}
                   className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"
                 >
                   <Heart className={`w-5 h-5 ${
@@ -502,31 +632,40 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
               </div>
             </div>
           </div>
-          {showLevelPicker && (
-            <div className="absolute top-4 right-20 z-50">
-              <div className="bg-white rounded-lg shadow-lg border p-2 flex gap-2">
-                {['夯','顶级','人上人'].map((l) => (
-                  <button
-                    key={l}
-                    onClick={async () => {
-                      try {
-                        await fetch('/api/assets/level', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ assetId: selectedAsset?.id, level: l })
-                        })
-                        setSelectedAssetLevel(l)
-                        setShowLevelPicker(false)
-                      } catch {}
-                    }}
-                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-sm"
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+        </div>
+      )}
+      
+      {pickerState && (
+        <div 
+          className="fixed z-[100] bg-white rounded-xl shadow-xl border border-gray-100 p-2 flex flex-col gap-1 min-w-[120px] animate-in fade-in zoom-in-95 duration-200"
+          style={{
+            left: pickerState.x,
+            top: pickerState.y,
+            transform: 'translate(-50%, -100%) translateY(-10px)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {['夯', '顶级', '人上人'].map(level => (
+            <button
+              key={level}
+              onClick={() => handleLevelSelect(level)}
+              className={`
+                px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-between
+                ${pickerState.currentLevel === level 
+                  ? 'bg-black text-white' 
+                  : 'hover:bg-gray-100 text-gray-700'}
+              `}
+            >
+              <span>{level}</span>
+              {pickerState.currentLevel === level && (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          ))}
+          {/* Add a generic 'Like' option if no level is selected? Or maybe 'Clear level'? */}
+          {/* For now, just the 3 levels as requested */}
         </div>
       )}
       {collectionAsset && (
