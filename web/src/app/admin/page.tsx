@@ -10,6 +10,9 @@ export default function AdminHomePage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState<string | null>(null)
+  const [users, setUsers] = useState<any[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+  const [userSearch, setUserSearch] = useState('')
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -17,6 +20,27 @@ export default function AdminHomePage() {
       if (role !== 'admin') redirect('/')
     }
   }, [status, session?.user])
+
+  const fetchUsers = async () => {
+    try {
+      setLoadingUsers(true)
+      const res = await fetch(`/api/admin/users?search=${userSearch}`)
+      const result = await res.json()
+      if (result.success) {
+        setUsers(result.data.items)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchUsers()
+    }
+  }, [status, userSearch])
 
   if (status === 'loading') {
     return <div className="p-6">加载中...</div>
@@ -40,30 +64,7 @@ export default function AdminHomePage() {
     }
   }
 
-  const [users, setUsers] = useState<any[]>([])
-  const [loadingUsers, setLoadingUsers] = useState(false)
-  const [userSearch, setUserSearch] = useState('')
 
-  const fetchUsers = async () => {
-    try {
-      setLoadingUsers(true)
-      const res = await fetch(`/api/admin/users?search=${userSearch}`)
-      const result = await res.json()
-      if (result.success) {
-        setUsers(result.data.items)
-      }
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoadingUsers(false)
-    }
-  }
-
-  useEffect(() => {
-    if (status === 'authenticated') {
-      fetchUsers()
-    }
-  }, [status, userSearch])
 
   const toggleUserDisplay = async (userId: string, currentStatus: boolean) => {
     try {
