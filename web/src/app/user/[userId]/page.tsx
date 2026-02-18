@@ -8,7 +8,7 @@ import { Navbar } from '@/components/Navbar'
 import { ProfileTabs } from '@/components/ProfileTabs'
 import { MasonryGrid } from '@/components/MasonryGrid'
 import { UploadModal } from '@/components/UploadModal'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Camera } from 'lucide-react'
 
 interface UserProfile {
   id: string
@@ -102,6 +102,38 @@ export default function UserProfilePage() {
   }
 
 
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('封面图大小不能超过 5MB')
+      return
+    }
+
+    try {
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        const base64 = reader.result as string
+        const res = await fetch('/api/user/cover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64 })
+        })
+        const result = await res.json()
+        if (result.success) {
+          setProfile(prev => prev ? { ...prev, coverUrl: result.url } : null)
+        } else {
+          alert(result.message || '上传失败')
+        }
+      }
+      reader.readAsDataURL(file)
+    } catch (e) {
+      console.error(e)
+      alert('上传出错')
+    }
+  }
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -146,7 +178,7 @@ export default function UserProfilePage() {
       />
 
       {/* Cover Image */}
-      <div className="h-64 bg-gray-200 relative w-full overflow-hidden">
+      <div className="h-64 bg-gray-200 relative w-full overflow-hidden group">
         {profile.coverUrl ? (
             <Image 
                 src={profile.coverUrl} 
@@ -157,6 +189,17 @@ export default function UserProfilePage() {
             />
         ) : (
             <div className="w-full h-full bg-gradient-to-r from-gray-200 to-gray-300" />
+        )}
+        
+        {/* Cover Upload Button */}
+        {profile.isOwner && (
+          <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <label className="flex items-center gap-2 bg-black/50 hover:bg-black/70 text-white px-4 py-2 rounded-full cursor-pointer transition-colors backdrop-blur-sm">
+              <input type="file" className="hidden" accept="image/*" onChange={handleCoverUpload} />
+              <Camera className="w-4 h-4" />
+              <span className="text-sm font-medium">更换封面</span>
+            </label>
+          </div>
         )}
       </div>
 

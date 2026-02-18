@@ -13,7 +13,6 @@ export async function GET(
     const currentUserId = session?.user?.id
     const isOwner = currentUserId === userId
 
-    // @ts-ignore: Prisma client not updated yet
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -39,7 +38,6 @@ export async function GET(
     // Unread messages count if owner
     let unreadMessages = 0
     if (isOwner) {
-        // @ts-ignore: Prisma client not updated yet
         unreadMessages = await prisma.message.count({
             where: { userId, isRead: false }
         })
