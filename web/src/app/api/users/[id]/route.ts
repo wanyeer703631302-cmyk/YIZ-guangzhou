@@ -9,12 +9,14 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = params.id
+    const identifier = params.id
     const currentUserId = session?.user?.id
-    const isOwner = currentUserId === userId
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier)
+    const where = isUuid ? { id: identifier } : { username: identifier }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where,
       select: {
         id: true,
         username: true,
@@ -34,6 +36,9 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 })
     }
+
+    const userId = user.id
+    const isOwner = currentUserId === userId
 
     // Unread messages count if owner
     let unreadMessages = 0
