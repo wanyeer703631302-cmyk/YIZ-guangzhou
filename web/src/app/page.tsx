@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 import { FolderSidebar } from '@/components/FolderSidebar'
 import { MasonryGrid } from '@/components/MasonryGrid'
 import { UploadModal } from '@/components/UploadModal'
+import { UserTabs } from '@/components/UserTabs'
 import { Search, Plus, LayoutGrid, List, LogOut, X } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import Image from 'next/image'
@@ -18,9 +19,30 @@ export default function Home() {
   const [showUpload, setShowUpload] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [isSearching, setIsSearching] = useState(false)
+  const [activeUserId, setActiveUserId] = useState<string | null>(null)
+  const [tabsUsers, setTabsUsers] = useState<{ id: string; name: string; avatar: string; count: number }[]>([])
 
   const handleRefresh = useCallback(() => {
     setRefreshKey(prev => prev + 1)
+  }, [])
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch('/api/stats')
+        const result = await res.json()
+        if (result.success) {
+          const users = (result.data.activeUsers || []).map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            avatar: u.avatar || '',
+            count: u.count || 0
+          }))
+          setTabsUsers(users)
+        }
+      } catch {}
+    }
+    fetchUsers()
   }, [])
 
   if (status === 'loading') {
@@ -128,7 +150,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4 text-sm text-gray-600">
               <span className="font-medium">
-                {selectedFolder ? '当前文件夹' : '全部素材'}
+                {selectedFolder ? '当前文件夹' : activeUserId ? '用户作品' : '精选内容'}
               </span>
               {searchQuery && (
                 <>
@@ -160,13 +182,35 @@ export default function Home() {
             </div>
           </div>
 
+          {/* 用户头像 Tabs */}
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                onClick={() => setActiveUserId(null)}
+                className={`px-3 py-1.5 rounded-full text-sm ${
+                  !activeUserId ? 'bg-black text-white' : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                精选
+              </button>
+            </div>
+            {tabsUsers.length > 0 && (
+              <UserTabs
+                users={tabsUsers}
+                currentUserId={activeUserId || ''}
+                onSelectUser={(id) => setActiveUserId(id)}
+              />
+            )}
+          </div>
+
           {/* Content */}
           <MasonryGrid
             key={refreshKey}
-            userId={session.user.id}
+            userId={activeUserId || undefined}
             folderId={selectedFolder}
             searchQuery={searchQuery}
             viewMode={viewMode}
+            likedOnly={!activeUserId}
           />
         </main>
       </div>

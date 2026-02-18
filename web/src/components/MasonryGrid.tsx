@@ -23,14 +23,15 @@ interface Asset {
 }
 
 interface MasonryGridProps {
-  userId: string
+  userId?: string
   folderId: string | null
   searchQuery: string
   viewMode: 'grid' | 'list'
+  likedOnly?: boolean
   onItemCountChange?: (count: number) => void
 }
 
-export function MasonryGrid({ userId, folderId, searchQuery, viewMode, onItemCountChange }: MasonryGridProps) {
+export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly, onItemCountChange }: MasonryGridProps) {
   const { data: session } = useSession()
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,12 +57,13 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, onItemCou
       else setLoadingMore(true)
       
       const params = new URLSearchParams({
-        userId: session.user.id,
         page: pageNum.toString(),
         limit: '20',
       })
+      if (userId) params.append('userId', userId)
       if (folderId) params.append('folderId', folderId)
       if (searchQuery) params.append('q', searchQuery)
+      if (likedOnly) params.append('liked', 'true')
 
       const response = await fetch(`/api/assets?${params}`)
       const result = await response.json()
@@ -87,7 +89,7 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, onItemCou
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [folderId, searchQuery, session?.user?.id, onItemCountChange])
+  }, [folderId, searchQuery, userId, likedOnly, session?.user?.id, onItemCountChange])
 
   // 初始加载和筛选条件变化时重置
   useEffect(() => {

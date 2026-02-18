@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { X, UploadCloud, Loader2, Check, AlertCircle } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
@@ -16,6 +16,12 @@ interface UploadFile {
   status: 'pending' | 'uploading' | 'success' | 'error'
   progress: number
   error?: string
+  titleOverride?: string
+  descriptionOverride?: string
+  originalUrlOverride?: string
+  metaTagsOverride?: string[]
+  folderIdOverride?: string | null
+  eagleFolderName?: string | null
 }
 
 export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalProps) {
@@ -26,6 +32,8 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
   const [isUploading, setIsUploading] = useState(false)
   const [availableFolders, setAvailableFolders] = useState<{id: string, name: string}[]>([])
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(folderId)
+  const [useEagleMetadata, setUseEagleMetadata] = useState(true)
+  const folderInputRef = useRef<HTMLInputElement | null>(null)
 
   const generateId = () => Math.random().toString(36).substring(2, 9)
 
@@ -46,6 +54,14 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
     }
     fetchFolders()
   }, [session?.user?.id])
+
+  useEffect(() => {
+    const el = folderInputRef.current
+    if (el) {
+      el.setAttribute('webkitdirectory', '')
+      el.setAttribute('directory', '')
+    }
+  }, [])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -69,6 +85,34 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
     addFiles(selectedFiles)
   }
 
+  const handleFolderSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || [])
+    if (selectedFiles.length === 0) return
+    const jsonFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.json'))
+    const imageFiles = selectedFiles.filter(f => f.type.startsWith('image/'))
+    const metaMap = await parseEagleJsonFiles(jsonFiles)
+    const folderMap = await ensureFoldersFromMeta(metaMap)
+    const uploadFiles: UploadFile[] = imageFiles.map(file => {
+      const key = file.name.toLowerCase()
+      const meta = metaMap[key] || null
+      const eagleFolderName = meta?.folderName || null
+      const folderIdOverride = eagleFolderName ? (folderMap[eagleFolderName] || null) : null
+      return {
+        file,
+        id: generateId(),
+        status: 'pending',
+        progress: 0,
+        titleOverride: meta?.title || undefined,
+        descriptionOverride: meta?.description || undefined,
+        originalUrlOverride: meta?.url || undefined,
+        metaTagsOverride: meta?.tags || [],
+        folderIdOverride,
+        eagleFolderName
+      }
+    })
+    setFiles(prev => [...prev, ...uploadFiles])
+  }
+
   const addFiles = (newFiles: File[]) => {
     const uploadFiles: UploadFile[] = newFiles.map(file => ({
       file,
@@ -88,9 +132,20 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
 
     const formData = new FormData()
     formData.append('file', uploadFile.file)
-    formData.append('folderId', selectedFolderId || '')
-    formData.append('tags', tags)
-    formData.append('title', uploadFile.file.name.replace(/\.[^/.]+$/, ''))
+    formData.append('folderId', (useEagleMetadata ? (uploadFile.folderIdOverride ?? selectedFolderId) : selectedFolderId) || '')
+    const combinedTags = [
+      ...(tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []),
+      ...(useEagleMetadata ? (uploadFile.metaTagsOverride || []) : [])
+    ]
+    const uniqueTags = Array.from(new Set(combinedTags))
+    formData.append('tags', uniqueTags.join(','))
+    formData.append('title', (useEagleMetadata ? (uploadFile.titleOverride || uploadFile.file.name.replace(/\.[^/.]+$/, '')) : uploadFile.file.name.replace(/\.[^/.]+$/, '')))
+    if (useEagleMetadata && uploadFile.descriptionOverride) {
+      formData.append('description', uploadFile.descriptionOverride)
+    }
+    if (useEagleMetadata && uploadFile.originalUrlOverride) {
+      formData.append('originalUrl', uploadFile.originalUrlOverride)
+    }
 
     try {
       const response = await fetch('/api/upload', {
@@ -208,6 +263,20 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
                 点击选择文件
               </span>
             </label>
+            <p className="text-gray-600 mt-4 mb-2">或选择包含 Eagle 元数据的文件夹</p>
+            <label className="inline-block">
+              <input
+                type="file"
+                multiple
+                onChange={handleFolderSelect}
+                ref={folderInputRef}
+                className="hidden"
+                disabled={isUploading}
+              />
+              <span className="text-black font-medium underline cursor-pointer hover:no-underline">
+                选择文件夹
+              </span>
+            </label>
           </div>
 
           {/* 标签输入 */}
@@ -225,6 +294,15 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
               />
               <p className="text-xs text-gray-400 mt-1">这些标签会应用到所有上传的图片</p>
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  id="use-eagle"
+                  type="checkbox"
+                  checked={useEagleMetadata}
+                  onChange={(e) => setUseEagleMetadata(e.target.checked)}
+                />
+                <label htmlFor="use-eagle" className="text-sm text-gray-700">自动匹配 Eagle 元数据（标题、链接、标签、分类）</label>
+              </div>
             </div>
           )}
 
@@ -278,8 +356,17 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{file.file.name}</p>
+                    <p className="text-sm font-medium truncate">{file.titleOverride || file.file.name}</p>
                     <p className="text-xs text-gray-500">{formatFileSize(file.file.size)}</p>
+                    {useEagleMetadata && (file.eagleFolderName || (file.metaTagsOverride && file.metaTagsOverride.length > 0) || file.originalUrlOverride) && (
+                      <div className="mt-1 text-xs text-gray-500 space-y-1">
+                        {file.eagleFolderName && <div>分类：{file.eagleFolderName}</div>}
+                        {file.metaTagsOverride && file.metaTagsOverride.length > 0 && (
+                          <div>标签：{file.metaTagsOverride.join(', ')}</div>
+                        )}
+                        {file.originalUrlOverride && <div>来源：{file.originalUrlOverride}</div>}
+                      </div>
+                    )}
                     
                     {file.status === 'uploading' && (
                       <div className="mt-1 h-1 bg-gray-200 rounded-full overflow-hidden">
@@ -344,4 +431,59 @@ export function UploadModal({ onClose, folderId, onUploadSuccess }: UploadModalP
       </div>
     </div>
   )
+}
+
+async function parseEagleJsonFiles(jsonFiles: File[]) {
+  const metaMap: Record<string, { title?: string; description?: string; tags?: string[]; url?: string; folderName?: string }> = {}
+  for (const jf of jsonFiles) {
+    try {
+      const text = await jf.text()
+      const obj = JSON.parse(text)
+      const items = Array.isArray(obj) ? obj
+        : Array.isArray(obj.images) ? obj.images
+        : Array.isArray(obj.items) ? obj.items
+        : Array.isArray(obj.data) ? obj.data
+        : []
+      for (const it of items) {
+        const fileName = (it.fileName || it.name || it.title || it.path || it.file || it.filename || '').toString()
+        const base = fileName.split('/').pop()?.toLowerCase() || ''
+        if (!base) continue
+        const tags = Array.isArray(it.tags) ? it.tags : typeof it.tags === 'string' ? it.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : []
+        const folderName = it.folder || it.category || (Array.isArray(it.folders) ? it.folders[0] : undefined)
+        const url = it.url || it.link || it.sourceUrl || it.website || undefined
+        const description = it.annotation || it.desc || it.description || undefined
+        const title = it.title || it.name || undefined
+        metaMap[base] = { title, description, tags, url, folderName }
+      }
+    } catch {}
+  }
+  return metaMap
+}
+
+async function ensureFoldersFromMeta(metaMap: Record<string, { folderName?: string }>) {
+  const names = Array.from(new Set(Object.values(metaMap).map(m => (m.folderName || '').trim()).filter(Boolean)))
+  if (names.length === 0) return {}
+  const existingRes = await fetch('/api/folders')
+  const existingJson = await existingRes.json()
+  const existing: { id: string; name: string }[] = existingJson.success ? existingJson.data.map((f: any) => ({ id: f.id, name: f.name })) : []
+  const map: Record<string, string> = {}
+  for (const n of names) {
+    const found = existing.find(f => f.name === n)
+    if (found) {
+      map[n] = found.id
+      continue
+    }
+    try {
+      const res = await fetch('/api/folders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: n })
+      })
+      const result = await res.json()
+      if (result.success) {
+        map[n] = result.data.id
+      }
+    } catch {}
+  }
+  return map
 }

@@ -14,6 +14,7 @@ export default function CollectPage() {
   const [folders, setFolders] = useState<{id: string, name: string}[]>([])
   const [message, setMessage] = useState<string | null>(null)
   const autoCollectRef = useRef(false)
+  const [embedMode, setEmbedMode] = useState(false)
 
   useEffect(() => {
     const fetchFolders = async () => {
@@ -28,6 +29,8 @@ export default function CollectPage() {
   useEffect(() => {
     const url = searchParams.get('imageUrl')
     if (url) setImageUrl(url)
+    const embed = searchParams.get('embed')
+    setEmbedMode(embed === '1' || embed === 'true')
   }, [searchParams])
 
   const handleCollect = async () => {
@@ -41,6 +44,9 @@ export default function CollectPage() {
       const result = await res.json()
       if (!result.success) throw new Error(result.message)
       setMessage('采集成功')
+      if (embedMode && typeof window !== 'undefined') {
+        window.parent?.postMessage({ type: 'pincollect:collect-success', assetId: result.data?.id }, '*')
+      }
       setImageUrl('')
       setTitle('')
       setTags('')
@@ -61,8 +67,12 @@ export default function CollectPage() {
 
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">采集入口</h1>
-      <p className="text-sm text-gray-600 mb-6">使用浏览器扩展在外部网站点击图片即可自动带入到此页面。</p>
+      {!embedMode && (
+        <>
+          <h1 className="text-2xl font-bold mb-4">采集入口</h1>
+          <p className="text-sm text-gray-600 mb-6">使用浏览器扩展在外部网站点击图片即可自动带入到此页面。</p>
+        </>
+      )}
 
       <h2 className="text-xl font-semibold mb-3">采集确认</h2>
       <div className="space-y-3">

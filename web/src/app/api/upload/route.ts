@@ -18,6 +18,8 @@ export async function POST(request: Request) {
     const title = formData.get('title') as string;
     const tags = formData.get('tags') as string;
     const folderId = formData.get('folderId') as string;
+    const description = formData.get('description') as string;
+    const originalUrlInput = formData.get('originalUrl') as string;
     const session = await getServerSession(authOptions);
     const email = session?.user?.email as string | undefined;
     const sessionUserId = session?.user?.id as string | undefined;
@@ -75,9 +77,10 @@ export async function POST(request: Request) {
     const newAsset = await prisma.asset.create({
       data: {
         title: title || file.name.replace(/\.[^/.]+$/, ''),
+        description: description || undefined,
         storageUrl: cloudinaryResult.secure_url,
         thumbnailUrl: cloudinaryResult.secure_url.replace('/upload/', '/upload/f_auto,q_auto,c_thumb,w_400/'),
-        originalUrl: cloudinaryResult.secure_url,
+        originalUrl: originalUrlInput || cloudinaryResult.secure_url,
         width: cloudinaryResult.width,
         height: cloudinaryResult.height,
         fileSize: cloudinaryResult.bytes,

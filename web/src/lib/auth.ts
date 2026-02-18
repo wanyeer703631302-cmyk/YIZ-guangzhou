@@ -169,6 +169,22 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt', maxAge: 60 * 60 * 24 * 30 },
   jwt: { maxAge: 60 * 60 * 24 * 30 },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'google') {
+        const allowedEmails = (process.env.ALLOWED_EMAILS || '').split(',').map(s => s.trim()).filter(Boolean)
+        const allowedDomain = (process.env.ALLOWED_GOOGLE_DOMAIN || '').trim()
+        const email = user.email || (profile as any)?.email || ''
+        if (allowedEmails.length > 0 && !allowedEmails.includes(email)) {
+          return false
+        }
+        if (allowedDomain) {
+          const domain = email.split('@')[1] || ''
+          if (domain !== allowedDomain) return false
+        }
+        return true
+      }
+      return true
+    },
     async jwt({ token, user }) {
       if (user) {
         // @ts-ignore

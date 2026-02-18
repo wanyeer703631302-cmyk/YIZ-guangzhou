@@ -11,6 +11,7 @@ export async function GET(request: Request) {
     const folderId = searchParams.get('folderId');
     const searchQuery = searchParams.get('q');
     const tag = searchParams.get('tag');
+    const liked = searchParams.get('liked');
   const status = searchParams.get('status');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -31,6 +32,9 @@ export async function GET(request: Request) {
     if (tag) {
       where.tags = { some: { tag: { name: { equals: tag, mode: 'insensitive' } } } };
     }
+    if (liked && ['1','true','yes'].includes(liked)) {
+      where.likes = { some: {} }
+    }
 
     const [assets, total] = await Promise.all([
       prisma.asset.findMany({
@@ -39,7 +43,9 @@ export async function GET(request: Request) {
           user: { select: { id: true, username: true, avatarUrl: true } },
           tags: { include: { tag: { select: { name: true, color: true } } } },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: liked && ['1','true','yes'].includes(liked)
+          ? [{ likes: { _count: 'desc' } }, { createdAt: 'desc' }]
+          : { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
