@@ -84,7 +84,7 @@ export function UserDropdown({ user }: UserDropdownProps) {
           </button>
           
           <Link 
-            href={`/user/${user.id}`}
+            href={`/user/${encodeURIComponent(user.id || user.name || '')}`}
             className="w-full px-4 py-2 text-left text-sm hover:bg-[#f5f5f5] flex items-center gap-2 block"
             role="menuitem"
             onClick={() => setIsOpen(false)}
