@@ -66,17 +66,27 @@ export default function CollectPage() {
   }, [searchParams, session?.user?.id])
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className={`mx-auto ${embedMode ? 'p-4' : 'max-w-2xl p-6'}`}>
       {!embedMode && (
         <>
           <h1 className="text-2xl font-bold mb-4">采集入口</h1>
           <p className="text-sm text-gray-600 mb-6">使用浏览器扩展在外部网站点击图片即可自动带入到此页面。</p>
         </>
       )}
+      {embedMode && !session?.user?.id && (
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+          当前未登录，请先在新标签页登录后再采集。
+          <div className="mt-2">
+            <a href="/login" target="_blank" rel="noopener noreferrer" className="underline">打开登录页</a>
+          </div>
+        </div>
+      )}
 
       <h2 className="text-xl font-semibold mb-3">采集确认</h2>
       <div className="space-y-3">
-        <input value={imageUrl} onChange={(e)=>setImageUrl(e.target.value)} placeholder="图片 URL" className="w-full px-3 py-2 border rounded" />
+        {!embedMode && (
+          <input value={imageUrl} onChange={(e)=>setImageUrl(e.target.value)} placeholder="图片 URL" className="w-full px-3 py-2 border rounded" />
+        )}
         <input value={title} onChange={(e)=>setTitle(e.target.value)} placeholder="标题（可选）" className="w-full px-3 py-2 border rounded" />
         <input value={tags} onChange={(e)=>setTags(e.target.value)} placeholder="标签（用逗号分隔，可选）" className="w-full px-3 py-2 border rounded" />
         <select value={folderId || ''} onChange={(e)=>setFolderId(e.target.value || null)} className="w-full px-3 py-2 border rounded">

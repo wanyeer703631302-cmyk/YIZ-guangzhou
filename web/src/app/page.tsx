@@ -21,6 +21,7 @@ export default function Home() {
   const [isSearching, setIsSearching] = useState(false)
   const [activeUserId, setActiveUserId] = useState<string | null>(null)
   const [tabsUsers, setTabsUsers] = useState<{ id: string; name: string; avatar: string; count: number }[]>([])
+  const [levelTab, setLevelTab] = useState<'夯' | '顶级' | '人上人'>('夯')
 
   const handleRefresh = useCallback(() => {
     setRefreshKey(prev => prev + 1)
@@ -109,19 +110,21 @@ export default function Home() {
               </button>
 
               <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
-                {userImage ? (
-                  <Image
-                    src={userImage}
-                    alt={userName}
-                    width={40}
-                    height={40}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white font-medium">
-                    {userName[0]?.toUpperCase()}
-                  </div>
-                )}
+                <a href={(session.user as any)?.role === 'admin' ? '/admin' : '/me'} title="个人主页">
+                  {userImage ? (
+                    <Image
+                      src={userImage}
+                      alt={userName}
+                      width={40}
+                      height={40}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white font-medium">
+                      {userName[0]?.toUpperCase()}
+                    </div>
+                  )}
+                </a>
                 <div className="hidden md:block">
                   <p className="text-sm font-medium">{userName}</p>
                   <p className="text-xs text-gray-500">{userEmail}</p>
@@ -150,7 +153,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4 text-sm text-gray-600">
               <span className="font-medium">
-                {selectedFolder ? '当前文件夹' : activeUserId ? '用户作品' : '精选内容'}
+                {selectedFolder ? '当前文件夹' : activeUserId ? '用户作品' : `${levelTab} 内容`}
               </span>
               {searchQuery && (
                 <>
@@ -182,17 +185,18 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 用户头像 Tabs */}
+          {/* 等级 Tabs + 用户头像 */}
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-2">
-              <button
-                onClick={() => setActiveUserId(null)}
-                className={`px-3 py-1.5 rounded-full text-sm ${
-                  !activeUserId ? 'bg-black text-white' : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                精选
-              </button>
+              {(['夯','顶级','人上人'] as const).map(l => (
+                <button
+                  key={l}
+                  onClick={() => { setActiveUserId(null); setLevelTab(l) }}
+                  className={`px-3 py-1.5 rounded-full text-sm ${!activeUserId && levelTab===l ? 'bg-black text-white' : 'bg-gray-100 text-gray-700'}`}
+                >
+                  {l}
+                </button>
+              ))}
             </div>
             {tabsUsers.length > 0 && (
               <UserTabs
@@ -210,7 +214,8 @@ export default function Home() {
             folderId={selectedFolder}
             searchQuery={searchQuery}
             viewMode={viewMode}
-            likedOnly={!activeUserId}
+            likedOnly={false}
+            levelTag={!activeUserId ? levelTab : undefined}
           />
         </main>
       </div>

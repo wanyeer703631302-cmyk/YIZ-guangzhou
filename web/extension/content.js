@@ -28,8 +28,8 @@
     overlay.style.justifyContent = 'center';
 
     const box = document.createElement('div');
-    box.style.width = 'min(720px, 95vw)';
-    box.style.height = 'min(560px, 85vh)';
+    box.style.width = 'min(520px, 92vw)';
+    box.style.height = 'min(420px, 80vh)';
     box.style.background = '#fff';
     box.style.borderRadius = '16px';
     box.style.boxShadow = '0 10px 30px rgba(0,0,0,.3)';

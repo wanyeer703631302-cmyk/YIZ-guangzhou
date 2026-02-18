@@ -109,8 +109,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, data: newAsset });
   } catch (error: any) {
     console.error('上传失败:', error);
+    let message = error?.message || '上传失败';
+    if (typeof message === 'string' && /Server return invalid JSON/i.test(message)) {
+      message = 'Cloudinary 服务异常或远程响应非图片内容，请检查凭据与网络';
+    }
+    if (typeof message === 'string' && /<!DOCTYPE/i.test(message)) {
+      message = '远程返回了 HTML 页面而非图片资源，请更换图片地址或检查网络';
+    }
     return NextResponse.json(
-      { success: false, message: error.message || '上传失败' }, 
+      { success: false, message }, 
       { status: 500 }
     );
   }

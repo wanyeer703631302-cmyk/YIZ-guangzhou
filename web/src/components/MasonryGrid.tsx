@@ -28,10 +28,11 @@ interface MasonryGridProps {
   searchQuery: string
   viewMode: 'grid' | 'list'
   likedOnly?: boolean
+  levelTag?: string
   onItemCountChange?: (count: number) => void
 }
 
-export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly, onItemCountChange }: MasonryGridProps) {
+export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly, levelTag, onItemCountChange }: MasonryGridProps) {
   const { data: session } = useSession()
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,6 +47,7 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
   const [collectionIds, setCollectionIds] = useState<Set<string>>(new Set())
   const [newCollectionName, setNewCollectionName] = useState('')
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
+  const [showLevelPicker, setShowLevelPicker] = useState(false)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
@@ -64,6 +66,7 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
       if (folderId) params.append('folderId', folderId)
       if (searchQuery) params.append('q', searchQuery)
       if (likedOnly) params.append('liked', 'true')
+      if (levelTag) params.append('tag', levelTag)
 
       const response = await fetch(`/api/assets?${params}`)
       const result = await response.json()
@@ -89,7 +92,7 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [folderId, searchQuery, userId, likedOnly, session?.user?.id, onItemCountChange])
+  }, [folderId, searchQuery, userId, likedOnly, levelTag, session?.user?.id, onItemCountChange])
 
   // 初始加载和筛选条件变化时重置
   useEffect(() => {
@@ -213,6 +216,12 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
   const toggleCollection = useCallback(async (collectionId: string) => {
     if (!collectionAsset) return
     const isIn = collectionIds.has(collectionId)
+    setCollectionIds(prev => {
+      const next = new Set(prev)
+      if (isIn) next.delete(collectionId)
+      else next.add(collectionId)
+      return next
+    })
     try {
       const res = await fetch('/api/collections/items', {
         method: isIn ? 'DELETE' : 'POST',
@@ -221,13 +230,14 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
       })
       const result = await res.json()
       if (!result.success) throw new Error(result.message)
+    } catch (e) {
       setCollectionIds(prev => {
         const next = new Set(prev)
-        if (isIn) next.delete(collectionId)
-        else next.add(collectionId)
+        if (isIn) next.add(collectionId)
+        else next.delete(collectionId)
         return next
       })
-    } catch (e) {}
+    }
   }, [collectionAsset, collectionIds])
 
   const createCollection = useCallback(async () => {
@@ -469,7 +479,7 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
               </div>
               <div className="flex gap-3">
                 <button
-                  onClick={() => handleLike(selectedAsset.id)}
+                  onClick={() => setShowLevelPicker((v)=>!v)}
                   className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"
                 >
                   <Heart className={`w-5 h-5 ${likedAssets.has(selectedAsset.id) ? 'text-red-500 fill-red-500 scale-110' : 'text-white'}`} />
@@ -486,6 +496,30 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
               </div>
             </div>
           </div>
+          {showLevelPicker && (
+            <div className="absolute top-4 right-20 z-50">
+              <div className="bg-white rounded-lg shadow-lg border p-2 flex gap-2">
+                {['夯','顶级','人上人'].map((l) => (
+                  <button
+                    key={l}
+                    onClick={async () => {
+                      try {
+                        await fetch('/api/assets/level', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ assetId: selectedAsset?.id, level: l })
+                        })
+                        setShowLevelPicker(false)
+                      } catch {}
+                    }}
+                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
       {collectionAsset && (
@@ -497,22 +531,31 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
                 <div className="text-sm text-gray-500">暂无分类</div>
               )}
               {collections.map((c) => (
-                <div key={c.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
-                  <button
-                    className="flex items-center gap-2 text-sm"
-                    onClick={() => toggleCollection(c.id)}
-                  >
-                    <span className={`w-4 h-4 rounded border flex items-center justify-center ${collectionIds.has(c.id) ? 'bg-black border-black' : 'border-gray-300'}`}>
-                      {collectionIds.has(c.id) && <span className="w-2 h-2 bg-white rounded-sm" />}
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  onClick={() => toggleCollection(c.id)}
+                >
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className={`w-5 h-5 rounded border flex items-center justify-center ${collectionIds.has(c.id) ? 'bg-black border-black' : 'border-gray-300'}`}>
+                      {collectionIds.has(c.id) && <span className="w-2.5 h-2.5 bg-white rounded-sm" />}
                     </span>
                     <span>{c.name}</span>
                     {typeof c.itemCount === 'number' && <span className="text-xs text-gray-400">({c.itemCount})</span>}
-                  </button>
-                  <button className="text-xs text-gray-400 hover:text-gray-600" onClick={() => deleteCollection(c.id)}>
+                  </div>
+                  <button className="text-xs text-gray-400 hover:text-gray-600" onClick={(e) => { e.stopPropagation(); deleteCollection(c.id) }}>
                     删除
                   </button>
                 </div>
               ))}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setCollectionAsset(null)}
+                className="px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800"
+              >
+                确认
+              </button>
             </div>
             <div className="mt-4 flex gap-2">
               <input

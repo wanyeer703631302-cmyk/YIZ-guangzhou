@@ -1,5 +1,4 @@
 import type { NextAuthOptions } from 'next-auth'
-import GoogleProvider from 'next-auth/providers/google'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
@@ -10,27 +9,18 @@ import crypto from 'crypto'
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || ''
-    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
         identifier: { label: 'Identifier', type: 'text' },
-        password: { label: 'Password', type: 'password' },
-        code: { label: 'Code', type: 'text' },
-        mode: { label: 'Mode', type: 'text' }
+        password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials, req) {
         const identifier = credentials?.identifier?.trim()
         const password = credentials?.password
-        const code = credentials?.code
-        const mode = credentials?.mode || 'password'
         if (!identifier) return null
         if (
           identifier === 'admin@pincollect.local' &&
-          mode === 'password' &&
           password === 'admin123'
         ) {
           const hashed = await bcrypt.hash('admin123', 10)
@@ -73,54 +63,22 @@ export const authOptions: NextAuthOptions = {
         })
         if (!user) return null
         if (user.lockUntil && user.lockUntil > new Date()) return null
-        if (mode === 'code') {
-          if (!code) return null
-          const codeHash = crypto.createHash('sha256').update(code).digest('hex')
-          const record = await prisma.verificationCode.findFirst({
-            where: {
-              identifier,
-              purpose: 'login',
-              usedAt: null,
-              expiresAt: { gt: new Date() },
-              codeHash
-            },
-            orderBy: { createdAt: 'desc' }
+        if (!user.passwordHash || !password) {
+          return null
+        }
+        const valid = await bcrypt.compare(password, user.passwordHash)
+        if (!valid) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              failedLoginCount: { increment: 1 },
+              lockUntil: user.failedLoginCount + 1 >= 5 ? new Date(Date.now() + 10 * 60 * 1000) : null
+            }
           })
-          if (!record) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: {
-                failedLoginCount: { increment: 1 },
-                lockUntil: user.failedLoginCount + 1 >= 5 ? new Date(Date.now() + 10 * 60 * 1000) : null
-              }
-            })
-            await prisma.loginEvent.create({
-              data: { userId: user.id, ip: ip || null, userAgent: userAgent || null, eventType: 'failed_code' }
-            })
-            return null
-          }
-          await prisma.verificationCode.update({
-            where: { id: record.id },
-            data: { usedAt: new Date() }
+          await prisma.loginEvent.create({
+            data: { userId: user.id, ip: ip || null, userAgent: userAgent || null, eventType: 'failed_password' }
           })
-        } else {
-          if (!user.passwordHash || !password) {
-            return null
-          }
-          const valid = await bcrypt.compare(password, user.passwordHash)
-          if (!valid) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: {
-                failedLoginCount: { increment: 1 },
-                lockUntil: user.failedLoginCount + 1 >= 5 ? new Date(Date.now() + 10 * 60 * 1000) : null
-              }
-            })
-            await prisma.loginEvent.create({
-              data: { userId: user.id, ip: ip || null, userAgent: userAgent || null, eventType: 'failed_password' }
-            })
-            return null
-          }
+          return null
         }
         const lastIp = user.lastLoginIp
         await prisma.user.update({
@@ -169,22 +127,7 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt', maxAge: 60 * 60 * 24 * 30 },
   jwt: { maxAge: 60 * 60 * 24 * 30 },
   callbacks: {
-    async signIn({ user, account, profile }) {
-      if (account?.provider === 'google') {
-        const allowedEmails = (process.env.ALLOWED_EMAILS || '').split(',').map(s => s.trim()).filter(Boolean)
-        const allowedDomain = (process.env.ALLOWED_GOOGLE_DOMAIN || '').trim()
-        const email = user.email || (profile as any)?.email || ''
-        if (allowedEmails.length > 0 && !allowedEmails.includes(email)) {
-          return false
-        }
-        if (allowedDomain) {
-          const domain = email.split('@')[1] || ''
-          if (domain !== allowedDomain) return false
-        }
-        return true
-      }
-      return true
-    },
+    async signIn() { return true },
     async jwt({ token, user }) {
       if (user) {
         // @ts-ignore
