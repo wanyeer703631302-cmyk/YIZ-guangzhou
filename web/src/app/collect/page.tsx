@@ -89,11 +89,11 @@ export default function CollectPage() {
         )}
         <input value={title} onChange={(e)=>setTitle(e.target.value)} placeholder="标题（可选）" className="w-full px-3 py-2 border rounded" />
         <input value={tags} onChange={(e)=>setTags(e.target.value)} placeholder="标签（用逗号分隔，可选）" className="w-full px-3 py-2 border rounded" />
-        <select value={folderId || ''} onChange={(e)=>setFolderId(e.target.value || null)} className="w-full px-3 py-2 border rounded">
+        <select value={folderId || ''} onChange={(e)=>setFolderId(e.target.value || null)} className="w-full px-3 py-2 border rounded" disabled={embedMode && !session?.user?.id}>
           <option value="">不分类</option>
           {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
         </select>
-        <button onClick={handleCollect} className="px-4 py-2 bg-black text-white rounded">采集</button>
+        <button onClick={handleCollect} className="px-4 py-2 bg-black text-white rounded" disabled={embedMode && !session?.user?.id}>采集</button>
         {message && <p className="text-sm text-gray-700">{message}</p>}
       </div>
     </div>

@@ -60,18 +60,29 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const cloudinaryResult = await new Promise<any>((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
-        { 
-          folder: 'pincollect',
-          resource_type: 'image',
-        },
-        (error, result) => {
-          if (error || !result) reject(error);
-          else resolve(result);
-        }
-      ).end(buffer);
-    });
+    let cloudinaryResult: any;
+    try {
+      cloudinaryResult = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          { 
+            folder: 'pincollect',
+            resource_type: 'auto',
+          },
+          (error, result) => {
+            if (error || !result) reject(error);
+            else resolve(result);
+          }
+        ).end(buffer);
+      });
+    } catch (e) {
+      const mime = (file as any).type || 'application/octet-stream';
+      const b64 = buffer.toString('base64');
+      const dataUri = `data:${mime};base64,${b64}`;
+      cloudinaryResult = await cloudinary.uploader.upload(dataUri, {
+        folder: 'pincollect',
+        resource_type: 'auto',
+      });
+    }
 
     // 2. 存入数据库 (使用统一的 Asset 模型)
     const newAsset = await prisma.asset.create({

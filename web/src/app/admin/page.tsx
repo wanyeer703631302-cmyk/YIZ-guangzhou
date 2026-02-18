@@ -48,7 +48,6 @@ export default function AdminHomePage() {
         <h2 className="text-xl font-semibold">管理面板</h2>
         <div className="flex gap-3">
           <a href="/stats" className="px-4 py-2 bg-black text-white rounded">统计仪表盘</a>
-          <a href="/admin/review" className="px-4 py-2 bg-black text-white rounded">审核/版本管理</a>
         </div>
       </section>
 

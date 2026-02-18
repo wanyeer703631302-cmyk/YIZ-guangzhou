@@ -49,7 +49,8 @@ export async function GET(request: Request) {
       giverId: it.tag.user?.id,
       giverName: it.tag.user?.username,
       giverAvatar: it.tag.user?.avatarUrl,
-      level: it.tag.name
+      level: it.tag.name,
+      time: it.addedAt
     }))
     return NextResponse.json({ success: true, data: { items: data, total, page, limit, totalPages: Math.ceil(total / limit) } })
   } catch (error: any) {

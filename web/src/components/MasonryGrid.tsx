@@ -48,6 +48,7 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
   const [newCollectionName, setNewCollectionName] = useState('')
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [showLevelPicker, setShowLevelPicker] = useState(false)
+  const [selectedAssetLevel, setSelectedAssetLevel] = useState<string | null>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
@@ -482,7 +483,12 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
                   onClick={() => setShowLevelPicker((v)=>!v)}
                   className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"
                 >
-                  <Heart className={`w-5 h-5 ${likedAssets.has(selectedAsset.id) ? 'text-red-500 fill-red-500 scale-110' : 'text-white'}`} />
+                  <Heart className={`w-5 h-5 ${
+                    selectedAssetLevel === '夯' ? 'text-red-500 fill-red-500' :
+                    selectedAssetLevel === '顶级' ? 'text-yellow-400 fill-yellow-400' :
+                    selectedAssetLevel === '人上人' ? 'text-purple-500 fill-purple-500' :
+                    'text-white'
+                  }`} />
                 </button>
                 <button
                   onClick={() => {
@@ -509,6 +515,7 @@ export function MasonryGrid({ userId, folderId, searchQuery, viewMode, likedOnly
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ assetId: selectedAsset?.id, level: l })
                         })
+                        setSelectedAssetLevel(l)
                         setShowLevelPicker(false)
                       } catch {}
                     }}

@@ -14,6 +14,7 @@ interface MessageItem {
   giverName?: string
   giverAvatar?: string | null
   level: string
+  time?: string
 }
 
 export default function MePage() {
@@ -127,14 +128,29 @@ export default function MePage() {
       {tab==='messages' && (
         messages.length === 0 ? <div className="text-gray-500">暂无消息</div> : (
           <div className="space-y-3">
-            {messages.map((m, idx) => (
-              <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded">
-                {m.giverAvatar ? <Image src={m.giverAvatar} alt={m.giverName || ''} width={32} height={32} className="rounded-full" /> : <div className="w-8 h-8 rounded-full bg-gray-200" />}
-                <div className="text-sm text-gray-700">
-                  <span className="font-medium">{m.giverName || '某人'}</span> 给你一个 {m.level}
+            {messages.map((m, idx) => {
+              const key = `msg:${m.assetId}:${m.giverId || ''}:${m.level}:${m.time || ''}`
+              const read = typeof window !== 'undefined' && !!localStorage.getItem(key)
+              return (
+                <div key={idx} className={`flex items-center gap-3 p-3 rounded border ${read ? 'bg-white border-gray-200' : 'bg-blue-50 border-blue-200'}`}>
+                  {m.giverAvatar ? <Image src={m.giverAvatar} alt={m.giverName || ''} width={32} height={32} className="rounded-full" /> : <div className="w-8 h-8 rounded-full bg-gray-200" />}
+                  <div className="flex-1">
+                    <div className="text-sm text-gray-700">
+                      <span className="font-medium">{m.giverName || '某人'}</span> 给你一个 {m.level}
+                    </div>
+                    {m.time && <div className="text-xs text-gray-500 mt-1">{new Date(m.time).toLocaleString()}</div>}
+                  </div>
+                  {!read && (
+                    <button
+                      className="px-2 py-1 text-xs bg-black text-white rounded"
+                      onClick={() => { if (typeof window !== 'undefined') localStorage.setItem(key, '1') }}
+                    >
+                      已读
+                    </button>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )
       )}
