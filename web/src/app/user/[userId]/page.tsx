@@ -270,15 +270,16 @@ export default function UserProfilePage() {
                         )}
                     </div>
                 ) : (
-                    <MasonryGrid 
-                        userId={userId}
-                        folderId={null}
-                        viewMode="grid"
-                        searchQuery={searchQuery}
-                        sourceType={getSourceType()}
-                        key={`${activeTab}-${refreshKey}`}
-                        onItemCountChange={() => {}}
-                    />
+                    <div key={`${activeTab}-${refreshKey}`}>
+                        <MasonryGrid 
+                            userId={userId}
+                            folderId={null}
+                            viewMode="grid"
+                            searchQuery={searchQuery}
+                            sourceType={getSourceType()}
+                            onItemCountChange={() => {}}
+                        />
+                    </div>
                 )}
             </div>
         </div>
