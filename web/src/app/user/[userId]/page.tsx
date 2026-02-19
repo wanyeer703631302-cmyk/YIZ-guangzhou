@@ -186,10 +186,13 @@ export default function UserProfilePage() {
                 fill 
                 className="object-cover"
                 priority
+                onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                }}
             />
-        ) : (
-            <div className="w-full h-full bg-gradient-to-r from-gray-200 to-gray-300" />
-        )}
+        ) : null}
+        <div className="w-full h-full bg-gradient-to-r from-gray-200 to-gray-300" />
         
         {/* Cover Upload Button */}
         {profile.isOwner && (
@@ -214,12 +217,19 @@ export default function UserProfilePage() {
                             alt={profile.name} 
                             fill 
                             className="object-cover"
+                            onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const fallback = target.parentElement?.querySelector('.avatar-fallback') as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                            }}
                         />
-                    ) : (
-                        <div className="w-full h-full bg-gray-100 flex items-center justify-center text-3xl font-bold text-gray-400">
-                            {profile.name?.[0]?.toUpperCase()}
-                        </div>
-                    )}
+                    ) : null}
+                    <div className={`avatar-fallback w-full h-full bg-gray-100 flex items-center justify-center text-3xl font-bold text-gray-400 ${
+                        profile.avatarUrl || profile.image ? 'hidden' : 'flex'
+                    }`}>
+                        {profile.name?.[0]?.toUpperCase()}
+                    </div>
                 </div>
                 <div className="mb-4">
                     <h1 className="text-2xl font-bold text-gray-900">{profile.name}</h1>

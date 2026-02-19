@@ -31,10 +31,16 @@ export default function Home() {
       try {
         const res = await fetch('/api/home/users')
         const result = await res.json()
-        if (result.success) {
+        if (result.success && Array.isArray(result.data)) {
           setTabsUsers(result.data)
+        } else {
+          console.error('获取用户列表失败:', result.message)
+          setTabsUsers([])
         }
-      } catch {}
+      } catch (error) {
+        console.error('获取用户列表出错:', error)
+        setTabsUsers([])
+      }
     }
     fetchUsers()
   }, [])

@@ -12,7 +12,12 @@ export async function GET(
     const identifier = params.id
     const currentUserId = session?.user?.id
 
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier)
+    if (!identifier) {
+      return NextResponse.json({ success: false, message: 'User ID is required' }, { status: 400 })
+    }
+
+    // More robust UUID detection
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier)
     const where = isUuid ? { id: identifier } : { username: identifier }
 
     const user = await prisma.user.findUnique({
@@ -43,9 +48,14 @@ export async function GET(
     // Unread messages count if owner
     let unreadMessages = 0
     if (isOwner) {
-        unreadMessages = await prisma.message.count({
-            where: { userId, isRead: false }
-        })
+        try {
+          unreadMessages = await prisma.message.count({
+              where: { userId, isRead: false }
+          })
+        } catch (e) {
+          console.error('Failed to count unread messages:', e)
+          // Continue without unread count
+        }
     }
 
     // Construct response
@@ -55,6 +65,7 @@ export async function GET(
       email: isOwner ? user.email : undefined,
       avatarUrl: user.avatarUrl,
       coverUrl: user.coverUrl,
+      image: user.avatarUrl, // Add image field for compatibility
       isOwner,
       stats: {
         uploads: user._count.assets,
@@ -69,6 +80,7 @@ export async function GET(
       data: responseData
     })
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 })
+    console.error('User API error:', error)
+    return NextResponse.json({ success: false, message: error.message || 'Internal server error' }, { status: 500 })
   }
 }

@@ -30,15 +30,20 @@ export async function GET() {
     const data = users.map(user => ({
       id: user.id,
       name: user.username,
-      avatar: user.avatarUrl || '',
+      avatar: user.avatarUrl || '', // Ensure avatar is never null
       count: user._count.assets
     }))
 
     return NextResponse.json({
       success: true,
-      data: data
+      data
     })
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 })
+    console.error('Home users API error:', error)
+    return NextResponse.json({ 
+      success: false, 
+      message: error.message || 'Failed to fetch users',
+      data: [] // Return empty array as fallback
+    }, { status: 500 })
   }
 }

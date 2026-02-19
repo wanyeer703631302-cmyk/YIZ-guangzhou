@@ -9,7 +9,9 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.railway.app' },
     ],
     formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 3600,
+    minimumCacheTTL: 86400, // 24 hours cache for better performance
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   async rewrites() {
     const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://yiz-guangzhou-production.up.railway.app'
@@ -32,7 +34,7 @@ const nextConfig = {
       {
         source: '/_next/image',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=60' }
+          { key: 'Cache-Control', value: 'public, max-age=86400' } // 24 hours for images
         ],
       },
       {

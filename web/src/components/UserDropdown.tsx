@@ -50,12 +50,19 @@ export function UserDropdown({ user }: UserDropdownProps) {
             width={32} 
             height={32} 
             className="rounded-full object-cover w-8 h-8" 
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              const fallback = target.parentElement?.querySelector('.avatar-fallback') as HTMLElement;
+              if (fallback) fallback.style.display = 'flex';
+            }}
           />
-        ) : (
-          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 text-sm font-medium">
-            {(user.name?.[0] || user.email?.[0] || 'U').toUpperCase()}
-          </div>
-        )}
+        ) : null}
+        <div className={`avatar-fallback w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 text-sm font-medium ${
+          user.image ? 'hidden' : 'flex'
+        }`}>
+          {(user.name?.[0] || user.email?.[0] || 'U').toUpperCase()}
+        </div>
       </button>
 
       {isOpen && (
