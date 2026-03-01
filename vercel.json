@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "app/dist",
-  "installCommand": "npm install --legacy-peer-deps && cd app && npm install",
+  "installCommand": "npm install --prefix . --legacy-peer-deps && npm install --prefix app",
   "framework": null,
   "rewrites": [
     {
