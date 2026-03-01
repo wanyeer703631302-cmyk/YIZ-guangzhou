@@ -1,14 +1,13 @@
 import React, { useRef } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { motion, useMotionValue } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export interface DockProps {
   children: React.ReactNode;
-  direction?: "top" | "middle" | "bottom";
   className?: string;
 }
 
-export const Dock = ({ children, direction = "middle", className }: DockProps) => {
+export const Dock = ({ children, className }: DockProps) => {
   return (
     <motion.div
       className={cn(
@@ -29,7 +28,6 @@ export interface DockIconProps {
 
 export const DockIcon = ({ children, className, onClick }: DockIconProps) => {
   const ref = useRef<HTMLButtonElement>(null);
-  const mouseX = useMotionValue(Infinity);
 
   return (
     <motion.button

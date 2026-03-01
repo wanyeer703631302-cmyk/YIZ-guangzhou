@@ -31,7 +31,6 @@ export function useGalleryState(
   options: UseGalleryStateOptions
 ): UseGalleryStateReturn {
   const {
-    items,
     initialLikes = new Set<number>(),
     initialBookmarks = new Set<number>(),
     onLike,

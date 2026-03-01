@@ -99,6 +99,9 @@ export function useThreeScene(options: UseThreeSceneOptions): UseThreeSceneRetur
       const meshes = createGridMeshes(textures, items, gridConfig, gridGroup);
       meshesRef.current = meshes;
 
+      // Raycaster for interaction
+      const raycaster = new THREE.Raycaster();
+
       // 保存场景引用
       sceneRefsRef.current = {
         scene,
@@ -107,6 +110,8 @@ export function useThreeScene(options: UseThreeSceneOptions): UseThreeSceneRetur
         composer,
         distortionPass,
         gridGroup,
+        meshes: meshesRef.current,
+        raycaster,
       };
 
       // 窗口大小调整处理

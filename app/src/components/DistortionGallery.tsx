@@ -89,7 +89,6 @@ export const DistortionGallery = ({
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hoveredMeshBounds, setHoveredMeshBounds] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
-  const [currentUserIndex, setCurrentUserIndex] = useState(0);
   const dragDirectionRef = useRef<'horizontal' | 'vertical' | null>(null);
 
   // 鐐硅禐澶勭悊

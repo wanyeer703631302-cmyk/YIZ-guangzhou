@@ -19,7 +19,6 @@ export const ActionButtons = React.memo<ActionButtonsProps>(({
   isBookmarked,
   onLike,
   onBookmark,
-  variant = 'overlay',
 }) => {
   return (
     <div 
