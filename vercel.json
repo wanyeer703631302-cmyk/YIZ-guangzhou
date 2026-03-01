@@ -4,6 +4,7 @@
   "outputDirectory": "app/dist",
   "installCommand": "npm install",
   "framework": null,
+  "rootDirectory": ".",
   "rewrites": [
     {
       "source": "/((?!api).*)",
