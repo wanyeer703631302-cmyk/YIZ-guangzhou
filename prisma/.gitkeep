@@ -1,0 +1,7 @@
+# Prisma Directory
+
+This directory contains database configuration and schema definitions.
+
+## Structure
+- `schema.prisma` - Database schema and models
+- `migrations/` - Database migration scripts

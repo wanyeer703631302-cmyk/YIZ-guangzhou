@@ -1,0 +1,11 @@
+# API Directory
+
+This directory contains Vercel Serverless Functions for the backend API endpoints.
+
+## Structure
+- `health.ts` - Health check endpoint
+- `auth.ts` - Authentication endpoints (login, register, session)
+- `assets.ts` - Asset management endpoints
+- `upload.ts` - Image upload endpoint
+- `likes.ts` - Like functionality endpoints
+- `favorites.ts` - Favorite functionality endpoints

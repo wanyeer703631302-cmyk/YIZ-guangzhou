@@ -1,0 +1,576 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Ghost, Menu, X, MapPin, Clock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { DistortionGallery } from './components/DistortionGallery';
+import { MouseFollowGallery } from './components/MouseFollowGallery';
+import { GalleryModeToggle } from './components/GalleryModeToggle';
+
+// Gallery item type
+interface GalleryItem {
+  id: number;
+  title: string;
+  brand: string;
+  category: string[];
+  year: string;
+  image: string;
+  color: string;
+}
+
+// Sample gallery data
+const galleryData: GalleryItem[] = [
+  {
+    id: 1,
+    title: "Pixel Singapore Takeover",
+    brand: "Google",
+    category: ["PRODUCT", "CAMPAIGN", "CONTENT"],
+    year: "2025",
+    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop",
+    color: "from-blue-500/20 to-purple-500/20"
+  },
+  {
+    id: 2,
+    title: "Festive Greetings",
+    brand: "Johnnie Walker",
+    category: ["COMMUNICATION", "ILLUSTRATION", "CAMPAIGN"],
+    year: "2025",
+    image: "https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=800&h=600&fit=crop",
+    color: "from-amber-500/20 to-orange-500/20"
+  },
+  {
+    id: 3,
+    title: "Cloud Discovery",
+    brand: "Google Cloud",
+    category: ["EXPERIENCE", "PHYSICAL", "EVENT"],
+    year: "2025",
+    image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&h=600&fit=crop",
+    color: "from-cyan-500/20 to-blue-500/20"
+  },
+  {
+    id: 4,
+    title: "Business Resilience",
+    brand: "Zendesk",
+    category: ["COMMUNICATION", "AI", "EVENT"],
+    year: "2023",
+    image: "https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&h=600&fit=crop",
+    color: "from-green-500/20 to-emerald-500/20"
+  },
+  {
+    id: 5,
+    title: "Club Vibe",
+    brand: "Baja Cat",
+    category: ["EXPERIENCE", "WEBSITE", "3D"],
+    year: "2025",
+    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop",
+    color: "from-pink-500/20 to-rose-500/20"
+  },
+  {
+    id: 6,
+    title: "AI Compass",
+    brand: "Google",
+    category: ["EXPERIENCE", "WEBSITE", "CONTENT"],
+    year: "2024",
+    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=600&fit=crop",
+    color: "from-violet-500/20 to-purple-500/20"
+  },
+  {
+    id: 7,
+    title: "Visitor Experience",
+    brand: "Google",
+    category: ["EXPERIENCE", "PHYSICAL", "EVENT"],
+    year: "2026",
+    image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=600&fit=crop",
+    color: "from-teal-500/20 to-cyan-500/20"
+  },
+  {
+    id: 8,
+    title: "Season's Treatings",
+    brand: "Nando's",
+    category: ["EXPERIENCE", "3D", "AI"],
+    year: "2026",
+    image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&h=600&fit=crop",
+    color: "from-red-500/20 to-orange-500/20"
+  },
+  {
+    id: 9,
+    title: "Virtual Try-On",
+    brand: "Netflix",
+    category: ["EXPERIENCE", "WEBSITE", "CAMPAIGN"],
+    year: "2024",
+    image: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&h=600&fit=crop",
+    color: "from-red-600/20 to-red-400/20"
+  },
+  {
+    id: 10,
+    title: "Walking Tour",
+    brand: "Stranger Things",
+    category: ["EXPERIENCE", "PHYSICAL", "EVENT"],
+    year: "2023",
+    image: "https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?w=800&h=600&fit=crop",
+    color: "from-indigo-500/20 to-blue-500/20"
+  },
+  {
+    id: 11,
+    title: "Extra Hot",
+    brand: "Nando's",
+    category: ["EXPERIENCE", "WEBSITE", "CAMPAIGN"],
+    year: "2023",
+    image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&h=600&fit=crop",
+    color: "from-yellow-500/20 to-orange-500/20"
+  },
+  {
+    id: 12,
+    title: "Doodle Champion",
+    brand: "Google",
+    category: ["PRODUCT", "GAME", "BRAND"],
+    year: "2021",
+    image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&h=600&fit=crop",
+    color: "from-green-400/20 to-teal-500/20"
+  }
+];
+
+// Distorted Image Card Component
+interface DistortedCardProps {
+  item: GalleryItem;
+  index: number;
+  mousePosition: { x: number; y: number };
+}
+
+const DistortedCard = ({ item, index, mousePosition }: DistortedCardProps) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [transform, setTransform] = useState({ rotateX: 0, rotateY: 0, scale: 1 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    if (!cardRef.current || isHovered) return;
+
+    const card = cardRef.current;
+    const rect = card.getBoundingClientRect();
+    const cardCenterX = rect.left + rect.width / 2;
+    const cardCenterY = rect.top + rect.height / 2;
+
+    // Calculate distance from mouse to card center
+    const deltaX = mousePosition.x - cardCenterX;
+    const deltaY = mousePosition.y - cardCenterY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    
+    // Maximum effect radius
+    const maxRadius = 400;
+    const intensity = Math.max(0, 1 - distance / maxRadius);
+
+    // Calculate rotation based on mouse position relative to card
+    const maxRotate = 15;
+    const rotateY = Math.max(-maxRotate, Math.min(maxRotate, (deltaX / maxRadius) * maxRotate * intensity));
+    const rotateX = Math.max(-maxRotate, Math.min(maxRotate, -(deltaY / maxRadius) * maxRotate * intensity));
+
+    setTransform({ rotateX, rotateY, scale: 1 + intensity * 0.02 });
+  }, [mousePosition, isHovered]);
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    setTransform({ rotateX: 0, rotateY: 0, scale: 1.05 });
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    setTransform({ rotateX: 0, rotateY: 0, scale: 1 });
+  };
+
+  // Calculate perspective origin based on card position in grid
+  const row = Math.floor(index / 4);
+  const col = index % 4;
+  const perspectiveOrigin = `${25 + col * 16.66}% ${25 + row * 25}%`;
+
+  return (
+    <motion.div
+      ref={cardRef}
+      className="relative group cursor-pointer"
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        perspective: '1000px',
+        perspectiveOrigin,
+      }}
+    >
+      <div
+        className="relative overflow-hidden rounded-lg transition-all duration-300 ease-out"
+        style={{
+          transform: `
+            rotateX(${transform.rotateX}deg) 
+            rotateY(${transform.rotateY}deg) 
+            scale(${transform.scale})
+          `,
+          transformStyle: 'preserve-3d',
+          boxShadow: isHovered 
+            ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255,255,255,0.1)' 
+            : '0 10px 30px -10px rgba(0, 0, 0, 0.5)',
+        }}
+      >
+        {/* Image container with distortion effect */}
+        <div className="relative aspect-[4/3] overflow-hidden bg-zinc-900">
+          {/* Gradient overlay */}
+          <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-60 z-10 mix-blend-overlay`} />
+          
+          {/* Main image */}
+          <img
+            src={item.image}
+            alt={item.title}
+            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+            style={{
+              filter: isHovered ? 'brightness(1.1)' : 'brightness(0.9)',
+            }}
+          />
+          
+          {/* Lens reflection effect */}
+          <div 
+            className="absolute inset-0 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+            style={{
+              background: `linear-gradient(
+                ${135 + transform.rotateY * 2}deg,
+                transparent 40%,
+                rgba(255,255,255,0.1) 50%,
+                transparent 60%
+              )`,
+            }}
+          />
+          
+          {/* Chromatic aberration effect on hover */}
+          <div 
+            className="absolute inset-0 z-30 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 mix-blend-screen"
+            style={{
+              background: `
+                linear-gradient(90deg, rgba(255,0,0,0.03) 0%, transparent 50%),
+                linear-gradient(-90deg, rgba(0,255,255,0.03) 0%, transparent 50%)
+              `,
+            }}
+          />
+        </div>
+
+        {/* Card info */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 z-40 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs text-zinc-400 font-mono">{item.year}</span>
+            <span className="text-xs text-zinc-600">•</span>
+            <span className="text-xs text-zinc-300">{item.brand}</span>
+          </div>
+          <h3 className="text-white font-medium text-sm mb-2 group-hover:text-zinc-200 transition-colors">
+            {item.title}
+          </h3>
+          <div className="flex flex-wrap gap-1">
+            {item.category.map((cat, i) => (
+              <span 
+                key={i}
+                className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-zinc-300 border border-white/5"
+              >
+                {cat}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Floating particles on hover */}
+      <AnimatePresence>
+        {isHovered && (
+          <>
+            {[...Array(3)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1 h-1 bg-white/30 rounded-full pointer-events-none"
+                initial={{ 
+                  opacity: 0,
+                  x: '50%',
+                  y: '50%',
+                }}
+                animate={{ 
+                  opacity: [0, 1, 0],
+                  x: `${50 + (i - 1) * 30}%`,
+                  y: `${30 - i * 20}%`,
+                }}
+                exit={{ opacity: 0 }}
+                transition={{ 
+                  duration: 1.5,
+                  repeat: Infinity,
+                  delay: i * 0.2,
+                }}
+              />
+            ))}
+          </>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+// Main App Component
+function App() {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(0);
+  const [galleryMode, setGalleryMode] = useState<'distortion' | 'mouseFollow'>('distortion');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 用户数据
+  const users = [
+    { id: 1, name: '@phantom_studio', color: 'from-purple-500 to-blue-500' },
+    { id: 2, name: '@creative_labs', color: 'from-pink-500 to-rose-500' },
+    { id: 3, name: '@design_collective', color: 'from-cyan-500 to-teal-500' },
+    { id: 4, name: '@visual_works', color: 'from-amber-500 to-orange-500' },
+    { id: 5, name: '@art_studio', color: 'from-green-500 to-emerald-500' },
+  ];
+
+  // Update time
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Track mouse position for lens effect
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    setMousePosition({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [handleMouseMove]);
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour12: false, 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZoneName: 'short'
+    });
+  };
+
+  return (
+    <div ref={containerRef} className="min-h-screen bg-black text-white overflow-x-hidden">
+      {/* Grid background */}
+      <div className="fixed inset-0 grid-lines pointer-events-none z-0" />
+      
+      {/* Ambient gradient */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-[150px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-[150px]" />
+      </div>
+
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
+          <motion.div 
+            className="flex items-center gap-3"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+              <Ghost className="w-6 h-6 text-black" />
+            </div>
+            <span className="text-sm font-medium tracking-wider hidden sm:block">PHANTOM</span>
+          </motion.div>
+
+          {/* Center info */}
+          <motion.div 
+            className="hidden md:flex items-center gap-8 text-xs text-zinc-500"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <div className="flex items-center gap-2">
+              <MapPin className="w-3 h-3" />
+              <span>LONDON, UK</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-3 h-3" />
+              <span>AUCKLAND, NZ</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-3 h-3" />
+              <span>{formatTime(currentTime)}</span>
+            </div>
+          </motion.div>
+
+          {/* Right actions */}
+          <motion.div 
+            className="flex items-center gap-4"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <button className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 text-sm hover:bg-white hover:text-black transition-all duration-300">
+              Let's Talk
+            </button>
+            <button 
+              className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </motion.div>
+        </div>
+      </header>
+
+      {/* Navigation Menu */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            className="fixed inset-0 z-40 bg-black/95 backdrop-blur-xl flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <nav className="flex flex-col items-center gap-8">
+              {['Work', 'About', 'Careers', 'Contact'].map((item, i) => (
+                <motion.a
+                  key={item}
+                  href={`#${item.toLowerCase()}`}
+                  className="text-4xl md:text-6xl font-light text-white hover:text-zinc-400 transition-colors"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {item}
+                </motion.a>
+              ))}
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Content */}
+      <main className="relative z-10">
+        {/* Gallery - 根据模式切换 */}
+        <section className="h-screen" id="work">
+          <AnimatePresence mode="wait">
+            {galleryMode === 'distortion' ? (
+              <motion.div
+                key="distortion"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="w-full h-full"
+              >
+                <DistortionGallery items={galleryData} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="mouseFollow"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="w-full h-full"
+              >
+                <MouseFollowGallery items={galleryData} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+      </main>
+
+      {/* 模式切换按钮 */}
+      <GalleryModeToggle
+        mode={galleryMode}
+        onToggle={() => setGalleryMode(prev => prev === 'distortion' ? 'mouseFollow' : 'distortion')}
+      />
+
+      {/* Bottom User Info - 并排显示，居中 */}
+      <motion.div 
+        className="fixed bottom-6 left-0 right-0 z-50 flex justify-center"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ 
+          duration: 0.6, 
+          delay: 0.5,
+          ease: [0.4, 0, 0.2, 1]
+        }}
+      >
+        <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-zinc-900/80 backdrop-blur-xl border border-white/10">
+          {users.map((user, index) => (
+            <motion.button
+              key={user.id}
+              onClick={() => setSelectedUser(index)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ 
+                type: 'spring',
+                stiffness: 400,
+                damping: 20
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${
+                selectedUser === index
+                  ? 'bg-white/10'
+                  : 'hover:bg-white/5'
+              }`}
+            >
+              <motion.div 
+                className={`w-6 h-6 rounded-full bg-gradient-to-br ${user.color} flex items-center justify-center`}
+                animate={{ 
+                  scale: selectedUser === index ? 1.1 : 1 
+                }}
+                transition={{ 
+                  type: 'spring',
+                  stiffness: 400,
+                  damping: 25
+                }}
+              >
+                <Ghost className="w-3 h-3 text-white" />
+              </motion.div>
+              <AnimatePresence mode="wait">
+                {selectedUser === index && (
+                  <motion.span
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ 
+                      width: 'auto', 
+                      opacity: 1,
+                      transition: {
+                        width: { 
+                          type: 'spring',
+                          stiffness: 300,
+                          damping: 30
+                        },
+                        opacity: { 
+                          duration: 0.2,
+                          ease: [0.4, 0, 0.2, 1]
+                        }
+                      }
+                    }}
+                    exit={{ 
+                      width: 0, 
+                      opacity: 0,
+                      transition: {
+                        width: { 
+                          type: 'spring',
+                          stiffness: 300,
+                          damping: 30
+                        },
+                        opacity: { 
+                          duration: 0.15,
+                          ease: [0.4, 0, 0.2, 1]
+                        }
+                      }
+                    }}
+                    className="text-white text-xs font-medium whitespace-nowrap overflow-hidden"
+                  >
+                    {user.name}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+export default App;

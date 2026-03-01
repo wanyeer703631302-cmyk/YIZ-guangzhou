@@ -1,0 +1,73 @@
+# 依赖
+node_modules/
+.pnp
+.pnp.js
+app/node_modules/
+
+# 环境变量
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+
+# 构建输出
+dist/
+build/
+.next/
+out/
+
+# 日志
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 编辑器和IDE
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 测试覆盖率
+coverage/
+*.lcov
+.nyc_output
+
+# 临时文件
+*.log
+*.tmp
+*.temp
+.cache/
+
+# Vercel
+.vercel
+
+# Prisma
+prisma/migrations/*_migration.sql
+
+# 操作系统
+Thumbs.db
+.DS_Store
+
+# Python (如果项目中有Python脚本)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+
+# 其他
+*.swp
+*.swo
+*~

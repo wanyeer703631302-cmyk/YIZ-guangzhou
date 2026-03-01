@@ -1,0 +1,1 @@
+export { GalleryCanvas } from './GalleryCanvas';

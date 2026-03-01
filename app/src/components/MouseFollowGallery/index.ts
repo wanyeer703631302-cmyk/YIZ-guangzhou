@@ -1,0 +1,1 @@
+export { MouseFollowGallery } from './MouseFollowGallery';

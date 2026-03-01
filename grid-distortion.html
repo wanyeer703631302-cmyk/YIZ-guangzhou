@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>凸面透视 - 镜头畸变效果</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body { 
+            width: 100%;
+            height: 100%;
+            margin: 0; 
+            padding: 0;
+            overflow: hidden; 
+            background: #000; 
+            font-family: sans-serif;
+        }
+        #canvas-container { 
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        #canvas-container canvas {
+            display: block;
+        }
+        .debug {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: #0f0;
+            font-family: monospace;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            padding: 8px;
+            border-radius: 4px;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div class="debug" id="debug">加载中...</div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+
+        // 图片列表
+        const images = [
+            'img_002.jpg', 'img_003.jpg', 'img_006.jpg', 'img_007.jpg', 
+            'img_010.jpg', 'img_011.jpg', 'img_014.jpg', 'img_016.jpg', 
+            'img_017.jpg', 'img_018.jpg', 'img_020.jpg', 'img_021.jpg',
+            'img_022.jpg', 'img_024.jpg', 'img_025.jpg', 'img_028.jpg',
+            'img_032.jpg', 'img_036.jpg', 'img_037.jpg', 'img_038.jpg'
+        ];
+
+        // === 场景设置 ===
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        // 获取容器并计算宽高比
+        const container = document.getElementById('canvas-container');
+        const aspect = container.clientWidth / container.clientHeight;
+        
+        const camera = new THREE.OrthographicCamera(
+            -aspect, aspect, 1, -1, 0.1, 100
+        );
+        camera.position.z = 1;
+
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            alpha: false
+        });
+        container.appendChild(renderer.domElement);
+        
+        // 获取容器的实际尺寸
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        
+        // setSize的第三个参数false表示不更新canvas的style
+        // 这样可以让CSS控制显示尺寸
+        renderer.setSize(width, height, false);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        
+        // 明确设置canvas的CSS尺寸
+        renderer.domElement.style.width = width + 'px';
+        renderer.domElement.style.height = height + 'px';
+
+        // === 镜头畸变着色器 ===
+        const DistortionShader = {
+            uniforms: {
+                'tDiffuse': { value: null },
+                'distortion': { value: 0.0 }  // 初始为0，平面状态
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D tDiffuse;
+                uniform float distortion;
+                varying vec2 vUv;
+
+                void main() {
+                    vec2 center = vec2(0.5, 0.5);
+                    vec2 uv = vUv - center;
+                    float dist = length(uv);
+                    
+                    // 桶形畸变
+                    float distortionFactor = 1.0 + distortion * dist * dist * 2.5;
+                    vec2 distortedUv = center + uv * distortionFactor;
+                    
+                    // 采样颜色
+                    vec3 color = texture2D(tDiffuse, distortedUv).rgb;
+                    
+                    // 屏幕边缘渐变遮罩 - 从边缘18%开始淡化
+                    float vignetteX = smoothstep(0.0, 0.18, vUv.x) * smoothstep(1.0, 0.82, vUv.x);
+                    float vignetteY = smoothstep(0.0, 0.18, vUv.y) * smoothstep(1.0, 0.82, vUv.y);
+                    float vignette = vignetteX * vignetteY;
+                    
+                    // 使用平方让淡化稍微快一点
+                    vignette = vignette * vignette;
+                    
+                    // 应用遮罩
+                    color *= vignette;
+                    
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `
+        };
+
+        // === 后处理设置 ===
+        const composer = new EffectComposer(renderer);
+        const renderPass = new RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        const distortionPass = new ShaderPass(DistortionShader);
+        composer.addPass(distortionPass);
+
+        // === 纹理加载 ===
+        const textureLoader = new THREE.TextureLoader();
+        const textures = [];
+        let loadedCount = 0;
+
+        function loadTextures() {
+            images.forEach((url) => {
+                textureLoader.load(
+                    `public/images/perspective/${url}`,
+                    (tex) => {
+                        tex.colorSpace = THREE.SRGBColorSpace;
+                        textures.push(tex);
+                        loadedCount++;
+                        if (loadedCount === images.length) {
+                            initGrid();
+                        }
+                    },
+                    undefined,
+                    (err) => {
+                        console.error("加载失败:", url);
+                        loadedCount++;
+                        if (loadedCount === images.length) initGrid();
+                    }
+                );
+            });
+        }
+
+        // === 网格生成 ===
+        const gridGroup = new THREE.Group();
+        scene.add(gridGroup);
+
+        const meshes = [];
+        let COLS, ROWS_VISIBLE, PANEL_WIDTH, PANEL_HEIGHT, GAP;
+
+        function initGrid() {
+            // 使用容器尺寸，与相机保持一致
+            const aspect = container.clientWidth / container.clientHeight;
+            
+            // 正交相机的视口范围是 [-aspect, aspect] x [-1, 1]
+            const viewportWidth = aspect * 2;
+            const viewportHeight = 2;
+            
+            // 让网格比视口大20%
+            const gridWidth = viewportWidth * 1.2;
+            const gridHeight = viewportHeight * 1.2;
+            
+            // 改为6列8行
+            COLS = 6;
+            
+            // 根据列数和扩大后的宽度计算面板尺寸
+            const panelSizeFromWidth = gridWidth / COLS;
+            
+            // 根据面板尺寸计算需要多少行
+            ROWS_VISIBLE = 8;
+            
+            PANEL_WIDTH = panelSizeFromWidth;
+            PANEL_HEIGHT = panelSizeFromWidth; // 保持正方形
+            GAP = PANEL_WIDTH * 0.04;
+            
+            // 计算实际网格占用的尺寸（包含间隙）
+            const actualGridWidth = COLS * PANEL_WIDTH + (COLS - 1) * GAP;
+            const actualGridHeight = ROWS_VISIBLE * PANEL_HEIGHT + (ROWS_VISIBLE - 1) * GAP;
+            
+            // 网格居中
+            const startX = -actualGridWidth / 2 + PANEL_WIDTH / 2;
+            const startY = actualGridHeight / 2 - PANEL_HEIGHT / 2;
+            
+            // 调试信息
+            console.log('视口范围:', {
+                width: `${-aspect} 到 ${aspect}`,
+                height: '-1 到 1'
+            });
+            console.log('网格信息:', {
+                cols: COLS,
+                rows: ROWS_VISIBLE,
+                panelSize: PANEL_WIDTH,
+                gap: GAP,
+                totalWidth: COLS * (PANEL_WIDTH + GAP),
+                totalHeight: ROWS_VISIBLE * (PANEL_HEIGHT + GAP),
+                leftEdge: startX - PANEL_WIDTH / 2,
+                rightEdge: startX + (COLS - 1) * (PANEL_WIDTH + GAP) + PANEL_WIDTH / 2,
+                topEdge: startY + PANEL_HEIGHT / 2,
+                bottomEdge: startY - (ROWS_VISIBLE - 1) * (PANEL_HEIGHT + GAP) - PANEL_HEIGHT / 2
+            });
+            
+            // 创建足够多的行和列用于无限滚动
+            const TOTAL_ROWS = 100;
+            const TOTAL_COLS = 100; // 增加列数用于左右无限滚动
+
+            for (let row = 0; row < TOTAL_ROWS; row++) {
+                for (let col = 0; col < TOTAL_COLS; col++) {
+                    const geometry = new THREE.PlaneGeometry(PANEL_WIDTH, PANEL_HEIGHT);
+                    
+                    const texIndex = (row * COLS + (col % COLS)) % textures.length;
+                    
+                    const material = new THREE.MeshBasicMaterial({
+                        map: textures[texIndex] || null,
+                        color: 0xffffff
+                    });
+                    
+                    const mesh = new THREE.Mesh(geometry, material);
+                    
+                    const x = startX + col * (PANEL_WIDTH + GAP);
+                    const y = startY - row * (PANEL_HEIGHT + GAP);
+                    
+                    mesh.position.set(x, y, 0);
+                    mesh.userData = { row, col, initialY: y, initialX: x };
+                    
+                    meshes.push(mesh);
+                    gridGroup.add(mesh);
+                }
+            }
+            
+            document.getElementById('debug').innerText = `${meshes.length} 个面板 (${TOTAL_COLS}列 x ${TOTAL_ROWS}行) | 拖拽浏览
+窗口: ${window.innerWidth}x${window.innerHeight}
+Canvas: ${renderer.domElement.width}x${renderer.domElement.height}
+容器: ${container.offsetWidth}x${container.offsetHeight}`;
+            animate();
+        }
+
+        // === 交互控制 ===
+        let isDragging = false;
+        let previousMouse = { x: 0, y: 0 };
+        let velocity = { x: 0, y: 0 };
+        let gridOffset = { x: 0, y: 0 };
+        let targetOffset = { x: 0, y: 0 };
+        
+        // 畸变动画相关
+        let currentDistortion = 0.0;
+        let targetDistortion = 0.0;
+        const maxDistortion = 0.5; // 增大最大畸变强度
+        let wheelTimeout = null;
+
+        // 移除左右边界限制，实现无限滚动
+
+        function onPointerDown(e) {
+            isDragging = true;
+            previousMouse = { x: e.clientX, y: e.clientY };
+            velocity = { x: 0, y: 0 };
+            document.body.style.cursor = 'grabbing';
+        }
+
+        function onPointerMove(e) {
+            if (!isDragging) return;
+            
+            const deltaX = (e.clientX - previousMouse.x) / window.innerWidth;
+            const deltaY = (e.clientY - previousMouse.y) / window.innerHeight;
+
+            targetOffset.x += deltaX * 2;
+            targetOffset.y += deltaY * 2;
+
+            // 移除左右边界限制
+            
+            velocity.x = deltaX * 2;
+            velocity.y = deltaY * 2;
+            
+            // 根据速度设置目标畸变强度
+            const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+            targetDistortion = Math.min(speed * 10, maxDistortion);
+
+            previousMouse = { x: e.clientX, y: e.clientY };
+        }
+
+        function onPointerUp() {
+            isDragging = false;
+            document.body.style.cursor = 'grab';
+            // 停止拖拽时，畸变逐渐恢复为0
+            targetDistortion = 0.0;
+        }
+
+        function onWheel(e) {
+            e.preventDefault();
+            targetOffset.y += e.deltaY * 0.001;
+            
+            // 滚轮滚动时添加更强的畸变效果
+            const wheelSpeed = Math.abs(e.deltaY) * 0.003; // 从0.001增加到0.003
+            targetDistortion = Math.min(wheelSpeed, maxDistortion);
+            
+            // 清除之前的定时器
+            if (wheelTimeout) clearTimeout(wheelTimeout);
+            
+            // 500ms后恢复平面
+            wheelTimeout = setTimeout(() => {
+                targetDistortion = 0.0;
+            }, 500);
+        }
+
+        window.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointerleave', onPointerUp);
+        window.addEventListener('wheel', onWheel, { passive: false });
+
+        // === 无限滚动更新 ===
+        // 不再需要切换纹理，只需要移动网格位置
+
+        // === 动画循环 ===
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // 惯性
+            if (!isDragging) {
+                targetOffset.x += velocity.x;
+                targetOffset.y += velocity.y;
+                velocity.x *= 0.95;
+                velocity.y *= 0.95;
+                
+                // 根据惯性速度调整畸变（只在没有滚轮操作时）
+                if (!wheelTimeout) {
+                    const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+                    if (speed > 0.001) {
+                        targetDistortion = Math.min(speed * 6, maxDistortion);
+                    } else {
+                        targetDistortion = 0.0;
+                    }
+                }
+                
+                // 移除左右边界弹性
+            }
+            
+            // 平滑插值 - 增加平滑度
+            gridOffset.x += (targetOffset.x - gridOffset.x) * 0.15;
+            gridOffset.y += (targetOffset.y - gridOffset.y) * 0.15;
+            
+            // 畸变平滑过渡
+            currentDistortion += (targetDistortion - currentDistortion) * 0.1;
+            distortionPass.uniforms.distortion.value = currentDistortion;
+            
+            // 应用位置
+            gridGroup.position.x = gridOffset.x;
+            gridGroup.position.y = gridOffset.y;
+            
+            // 不再需要更新纹理
+            
+            // 使用后处理渲染
+            composer.render();
+        }
+
+        // === 启动 ===
+        loadTextures();
+
+        // 窗口调整
+        window.addEventListener('resize', () => {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            const aspect = width / height;
+            
+            camera.left = -aspect;
+            camera.right = aspect;
+            camera.top = 1;
+            camera.bottom = -1;
+            camera.updateProjectionMatrix();
+            
+            renderer.setSize(width, height, false);
+            composer.setSize(width, height);
+            
+            // 明确设置canvas的CSS尺寸
+            renderer.domElement.style.width = width + 'px';
+            renderer.domElement.style.height = height + 'px';
+        });
+
+        document.body.style.cursor = 'grab';
+    </script>
+</body>
+</html>
