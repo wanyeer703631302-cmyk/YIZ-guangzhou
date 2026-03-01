@@ -53,8 +53,5 @@
     "tsx": "^4.19.2",
     "typescript": "~5.9.3",
     "vitest": "^3.0.0"
-  },
-  "engines": {
-    "node": "24.x"
   }
 }
