@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { motion, useMotionValue } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export interface DockProps {
