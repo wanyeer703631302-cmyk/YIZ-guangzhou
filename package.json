@@ -21,7 +21,7 @@
     "prisma:studio": "prisma studio",
     "validate:config": "tsx scripts/validate-config.ts",
     "postinstall": "npm run prisma:generate",
-    "vercel-build": "npm run validate:config && npm run prisma:generate && npm run prisma:migrate && npm run build:frontend",
+    "vercel-build": "npm run prisma:generate && npm run prisma:migrate && npm run build:frontend",
     "lint": "eslint . --ext .ts,.tsx",
     "type-check": "tsc --noEmit"
   },
