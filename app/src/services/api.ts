@@ -111,8 +111,7 @@ class ApiClient {
           items: demoAssets,
           total: demoAssets.length,
           page: 1,
-          pageSize: 50,
-          totalPages: 1
+          limit: 50
         }
       }
     }
