@@ -4,8 +4,9 @@
  */
 
 import { useState, useRef, useCallback } from 'react'
-import { Upload, X, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react'
+import { Upload, X, AlertCircle, CheckCircle2, RefreshCw, LogIn } from 'lucide-react'
 import { apiClient } from '../../services/api'
+import { useAuth } from '../../contexts'
 import { Button } from '../ui/button'
 import { Progress } from '../ui/progress'
 import { Card } from '../ui/card'
@@ -32,6 +33,7 @@ export function ImageUpload({
   onUploadComplete,
   folderId,
 }: ImageUploadProps) {
+  const { isAuthenticated } = useAuth()
   const [uploadState, setUploadState] = useState<UploadState>({
     file: null,
     preview: null,
@@ -242,8 +244,28 @@ export function ImageUpload({
   return (
     <div className="w-full max-w-2xl mx-auto p-4">
       <Card className="p-6">
-        {/* 上传区域 */}
-        {!uploadState.preview && (
+        {/* 未登录提示 */}
+        {!isAuthenticated && (
+          <div className="text-center py-12">
+            <LogIn className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+            <h3 className="text-xl font-semibold mb-2">需要登录</h3>
+            <p className="text-gray-600 mb-6">
+              请先登录后再上传图片
+            </p>
+            <Button onClick={() => {
+              toast.info('请点击右上角用户图标登录')
+              if (onUploadComplete) onUploadComplete()
+            }}>
+              知道了
+            </Button>
+          </div>
+        )}
+
+        {/* 已登录 - 显示上传界面 */}
+        {isAuthenticated && (
+          <>
+            {/* 上传区域 */}
+            {!uploadState.preview && (
           <div
             className={`
               relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
@@ -374,6 +396,8 @@ export function ImageUpload({
                 </div>
               )}
           </div>
+        )}
+          </>
         )}
       </Card>
     </div>

@@ -125,11 +125,42 @@ class ApiClient {
         body: formData,
       })
 
-      return await response.json()
+      // 检查Content-Type以确定如何解析响应
+      const contentType = response.headers.get('content-type')
+      const isJson = contentType?.includes('application/json')
+
+      let data: any
+
+      if (isJson) {
+        data = await response.json()
+      } else {
+        // 非JSON响应 - 先读取为文本
+        const text = await response.text()
+        
+        // 尝试解析为JSON
+        try {
+          data = JSON.parse(text)
+        } catch {
+          // 如果不是有效JSON，包装成错误响应
+          data = {
+            success: false,
+            error: text || `上传失败 (HTTP ${response.status})`
+          }
+        }
+      }
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || `上传失败 (HTTP ${response.status})`,
+        }
+      }
+
+      return data
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Upload failed',
+        error: error instanceof Error ? error.message : '上传失败',
       }
     }
   }
