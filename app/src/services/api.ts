@@ -100,6 +100,23 @@ class ApiClient {
   async getAssets(
     params?: AssetsQueryParams
   ): Promise<ApiResponse<AssetsListData>> {
+    // 演示模式：如果使用演示账号，返回演示数据
+    if (this.token?.startsWith('demo-token-')) {
+      // 从 localStorage 获取演示上传的图片
+      const demoAssets = JSON.parse(localStorage.getItem('demo_assets') || '[]')
+      
+      return {
+        success: true,
+        data: {
+          items: demoAssets,
+          total: demoAssets.length,
+          page: 1,
+          pageSize: 50,
+          totalPages: 1
+        }
+      }
+    }
+
     const query = new URLSearchParams(params as any).toString()
     return this.request(`/assets?${query}`)
   }
@@ -112,6 +129,37 @@ class ApiClient {
     file: File,
     metadata?: UploadMetadata
   ): Promise<ApiResponse<Asset>> {
+    // 演示模式：如果使用演示账号，模拟上传成功
+    if (this.token?.startsWith('demo-token-')) {
+      // 模拟上传延迟
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      
+      // 创建本地预览URL
+      const previewUrl = URL.createObjectURL(file)
+      
+      const demoAsset: Asset = {
+        id: 'demo-asset-' + Date.now(),
+        title: metadata?.title || file.name,
+        url: previewUrl,
+        thumbnailUrl: previewUrl,
+        size: file.size,
+        folderId: metadata?.folderId || null,
+        userId: 'demo-user-id',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      
+      // 保存到 localStorage
+      const demoAssets = JSON.parse(localStorage.getItem('demo_assets') || '[]')
+      demoAssets.unshift(demoAsset) // 添加到开头
+      localStorage.setItem('demo_assets', JSON.stringify(demoAssets))
+      
+      return {
+        success: true,
+        data: demoAsset
+      }
+    }
+
     const formData = new FormData()
     formData.append('file', file)
     if (metadata?.title) formData.append('title', metadata.title)
