@@ -16,6 +16,31 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // 演示模式快速登录
+  const handleDemoLogin = async () => {
+    setEmail('demo@yiz.com')
+    setPassword('demo123')
+    setLoading(true)
+    setError(null)
+
+    try {
+      console.log('使用演示账号登录')
+      const response = await apiClient.login('demo@yiz.com', 'demo123')
+      console.log('演示登录响应:', response)
+
+      if (response.success) {
+        onSuccess?.()
+      } else {
+        setError(response.error || '登录失败，请重试')
+      }
+    } catch (err) {
+      console.error('演示登录异常:', err)
+      setError('网络错误，请检查您的连接')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // 表单验证
   const validateForm = (): boolean => {
     if (!email.trim()) {
@@ -133,6 +158,17 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
           ) : (
             '登录'
           )}
+        </Button>
+
+        {/* 演示模式快速登录 */}
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={handleDemoLogin}
+          disabled={loading}
+        >
+          使用演示账号登录
         </Button>
       </form>
 
