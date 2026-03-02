@@ -29,7 +29,7 @@ interface HealthCheckResponse {
 /**
  * Timeout duration for database connection check (in milliseconds)
  */
-const DB_CONNECTION_TIMEOUT = 5000
+const DB_CONNECTION_TIMEOUT = 3000
 
 /**
  * Health check handler

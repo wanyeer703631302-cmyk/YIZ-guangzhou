@@ -250,7 +250,7 @@ class ApiClient {
    * 检查后端服务健康状态
    */
   async checkHealth(): Promise<ApiResponse<HealthData>> {
-    return this.request('/health')
+    return this.request('/health-fast')
   }
 }
 
