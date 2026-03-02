@@ -1,9 +1,17 @@
 import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+import path from 'path'
 
 export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './app/src'),
+    },
+  },
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'jsdom',
     setupFiles: ['./test/setup.ts'],
     coverage: {
       provider: 'v8',
@@ -28,7 +36,9 @@ export default defineConfig({
       'api/**/*.property.test.ts',
       'lib/**/*.property.test.ts',
       'app/src/**/*.test.ts',
+      'app/src/**/*.test.tsx',
       'app/src/**/*.property.test.ts',
+      'app/src/**/*.property.test.tsx',
     ],
   },
 })

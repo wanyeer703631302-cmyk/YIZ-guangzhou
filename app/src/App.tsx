@@ -33,6 +33,7 @@ function App() {
   const [galleryMode, setGalleryMode] = useState<'distortion' | 'mouseFollow'>('distortion');
   const [searchOpen, setSearchOpen] = useState(false);
   const [userSidebarOpen, setUserSidebarOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 临时完全禁用健康检查
@@ -42,8 +43,8 @@ function App() {
   // 从API加载资源
   const { items: apiItems, isLoading, error, refetch } = useAssets();
   
-  // 使用API数据，如果为空或出错则使用后备数据
-  const galleryData = apiItems.length > 0 ? apiItems : fallbackGalleryData;
+  // 优先使用API数据，fallbackGalleryData仅在开发环境使用
+  const galleryData = apiItems.length > 0 ? apiItems : (import.meta.env.DEV ? fallbackGalleryData : []);
 
   const users = [
     { id: 1, name: '@phantom_studio' },
@@ -82,15 +83,22 @@ function App() {
         </motion.div>
       </header>
 
-      <TopRightIcons onSearchClick={() => setSearchOpen(!searchOpen)} onUserClick={() => setUserSidebarOpen(!userSidebarOpen)} searchActive={searchOpen} userActive={userSidebarOpen} />
+      <TopRightIcons 
+        onSearchClick={() => setSearchOpen(!searchOpen)} 
+        onUserClick={() => setUserSidebarOpen(!userSidebarOpen)} 
+        onUploadClick={() => setUploadOpen(!uploadOpen)}
+        searchActive={searchOpen} 
+        userActive={userSidebarOpen}
+        uploadActive={uploadOpen}
+      />
       <TopSearchBar isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
       <UserSidebar isOpen={userSidebarOpen} onClose={() => setUserSidebarOpen(false)} />
 
       <main className="relative z-10">
-        <section className="h-screen" id="work">
+        <section className="min-h-screen flex items-center justify-center" id="work">
           {/* 加载状态 */}
           {isLoading && (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex items-center justify-center">
               <div className="text-center">
                 <div className="inline-block w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4" />
                 <p className="text-white/60">加载资源中...</p>
@@ -100,7 +108,7 @@ function App() {
 
           {/* 错误状态 */}
           {!isLoading && error && apiItems.length === 0 && (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex items-center justify-center">
               <div className="text-center max-w-md px-6">
                 <div className="text-6xl mb-4">⚠️</div>
                 <h2 className="text-2xl font-bold text-white mb-2">加载失败</h2>
@@ -115,9 +123,9 @@ function App() {
             </div>
           )}
 
-          {/* 空状态 */}
-          {!isLoading && !error && apiItems.length === 0 && (
-            <div className="flex items-center justify-center h-full">
+          {/* 空状态 - 只在API明确返回空数组且不在开发环境使用fallback时显示 */}
+          {!isLoading && !error && apiItems.length === 0 && galleryData.length === 0 && (
+            <div className="flex items-center justify-center">
               <div className="text-center max-w-md px-6">
                 <div className="text-6xl mb-4">📭</div>
                 <h2 className="text-2xl font-bold text-white mb-2">暂无内容</h2>
@@ -126,7 +134,7 @@ function App() {
             </div>
           )}
 
-          {/* 画廊内容 */}
+          {/* 画廊内容 - 当有数据时显示（API数据或开发环境的fallback数据） */}
           {!isLoading && galleryData.length > 0 && (
             <motion.div key={galleryMode} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="w-full h-full">
               {galleryMode === 'distortion' ? (

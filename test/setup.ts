@@ -1,4 +1,5 @@
 import { beforeAll, afterAll, afterEach } from 'vitest'
+import '@testing-library/jest-dom'
 
 // Mock localStorage for browser APIs
 const localStorageMock = (() => {
@@ -34,6 +35,7 @@ beforeAll(() => {
 // Cleanup after each test
 afterEach(() => {
   // Clear any mocks or test data
+  localStorageMock.clear()
 })
 
 // Cleanup after all tests

@@ -1,14 +1,17 @@
-import { Search, User } from 'lucide-react';
+import { Search, User, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface TopRightIconsProps {
   onSearchClick: () => void;
   onUserClick: () => void;
+  onUploadClick: () => void;
   searchActive: boolean;
   userActive: boolean;
+  uploadActive: boolean;
 }
 
-export const TopRightIcons = ({ onSearchClick, onUserClick, searchActive, userActive }: TopRightIconsProps) => {
+
+export const TopRightIcons = ({ onSearchClick, onUserClick, onUploadClick, searchActive, userActive, uploadActive }: TopRightIconsProps) => {
   return (
     <motion.div 
       className="fixed top-5 right-5 z-50 flex gap-2"
@@ -25,6 +28,16 @@ export const TopRightIcons = ({ onSearchClick, onUserClick, searchActive, userAc
         }`}
       >
         <Search size={16} strokeWidth={1.5} />
+      </button>
+      <button
+        onClick={onUploadClick}
+        className={`w-9 h-9 flex items-center justify-center border transition-all duration-150 ${
+          uploadActive 
+            ? 'bg-[#002FA7] border-[#002FA7] text-white' 
+            : 'bg-transparent border-white text-white hover:bg-white hover:text-black'
+        }`}
+      >
+        <Upload size={16} strokeWidth={1.5} />
       </button>
       <button
         onClick={onUserClick}

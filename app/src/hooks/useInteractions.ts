@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { apiClient } from '../services/api'
 import type { Like, Favorite } from '../types/api'
+import { useAuth } from '../contexts'
 
 interface InteractionsState {
   likes: Map<string, string> // assetId -> likeId
@@ -15,6 +16,7 @@ interface InteractionsState {
 }
 
 export const useInteractions = () => {
+  const { isAuthenticated } = useAuth()
   const [state, setState] = useState<InteractionsState>({
     likes: new Map(),
     favorites: new Map(),
@@ -24,6 +26,17 @@ export const useInteractions = () => {
 
   // 加载用户交互数据
   const loadInteractions = useCallback(async () => {
+    // 如果未认证，跳过 API 调用并返回空数据
+    if (!isAuthenticated) {
+      setState({
+        likes: new Map(),
+        favorites: new Map(),
+        isLoading: false,
+        error: null,
+      })
+      return
+    }
+
     setState(prev => ({ ...prev, isLoading: true, error: null }))
     
     const response = await apiClient.getUserInteractions()
@@ -47,13 +60,20 @@ export const useInteractions = () => {
         error: null,
       })
     } else {
+      // 静默处理 401/403 错误（未认证或无权限）
+      // 只在真正的服务器错误时显示错误信息
+      const isAuthError = response.error?.includes('401') || 
+                          response.error?.includes('403') ||
+                          response.error?.includes('未授权') ||
+                          response.error?.includes('无权限')
+      
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: response.error || '加载交互数据失败',
+        error: isAuthError ? null : (response.error || '加载交互数据失败'),
       }))
     }
-  }, [])
+  }, [isAuthenticated])
 
   // 初始加载
   useEffect(() => {
