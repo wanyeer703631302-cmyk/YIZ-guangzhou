@@ -70,11 +70,13 @@ describe('Property 1: Fault Condition - Graceful Error Handling', () => {
     expect(mockRes.json).toHaveBeenCalled()
     const response = mockRes.json.mock.calls[0][0]
     
-    expect(response).toHaveProperty('status', 'error')
-    expect(response).toHaveProperty('services')
-    expect(response.services).toHaveProperty('database', 'disconnected')
-    expect(response).toHaveProperty('message')
-    expect(response.message).toContain('database')
+    expect(response).toHaveProperty('success', false)
+    expect(response).toHaveProperty('data')
+    expect(response.data).toHaveProperty('status', 'error')
+    expect(response.data).toHaveProperty('services')
+    expect(response.data.services).toHaveProperty('database', 'disconnected')
+    expect(response.data).toHaveProperty('message')
+    expect(response.data.message).toContain('database')
   })
 
   /**
@@ -116,11 +118,13 @@ describe('Property 1: Fault Condition - Graceful Error Handling', () => {
     // Assert: Should return error information
     const response = mockRes.json.mock.calls[0][0]
     
-    expect(response).toHaveProperty('status', 'error')
-    expect(response).toHaveProperty('services')
-    expect(response.services).toHaveProperty('cloudinary', 'not configured')
-    expect(response).toHaveProperty('message')
-    expect(response.message).toContain('cloudinary')
+    expect(response).toHaveProperty('success', false)
+    expect(response).toHaveProperty('data')
+    expect(response.data).toHaveProperty('status', 'error')
+    expect(response.data).toHaveProperty('services')
+    expect(response.data.services).toHaveProperty('cloudinary', 'not configured')
+    expect(response.data).toHaveProperty('message')
+    expect(response.data.message).toContain('cloudinary')
   })
 
   /**
@@ -162,10 +166,12 @@ describe('Property 1: Fault Condition - Graceful Error Handling', () => {
     // Assert: Should return error information
     const response = mockRes.json.mock.calls[0][0]
     
-    expect(response).toHaveProperty('status', 'error')
-    expect(response).toHaveProperty('services')
-    expect(response.services).toHaveProperty('database', 'disconnected')
-    expect(response).toHaveProperty('message')
+    expect(response).toHaveProperty('success', false)
+    expect(response).toHaveProperty('data')
+    expect(response.data).toHaveProperty('status', 'error')
+    expect(response.data).toHaveProperty('services')
+    expect(response.data.services).toHaveProperty('database', 'disconnected')
+    expect(response.data).toHaveProperty('message')
   })
 
   /**
@@ -205,12 +211,14 @@ describe('Property 1: Fault Condition - Graceful Error Handling', () => {
     // Assert: Should return error information for both services
     const response = mockRes.json.mock.calls[0][0]
     
-    expect(response).toHaveProperty('status', 'error')
-    expect(response).toHaveProperty('services')
-    expect(response.services).toHaveProperty('database', 'disconnected')
-    expect(response.services).toHaveProperty('cloudinary', 'not configured')
-    expect(response).toHaveProperty('message')
-    expect(response.message).toContain('database')
-    expect(response.message).toContain('cloudinary')
+    expect(response).toHaveProperty('success', false)
+    expect(response).toHaveProperty('data')
+    expect(response.data).toHaveProperty('status', 'error')
+    expect(response.data).toHaveProperty('services')
+    expect(response.data.services).toHaveProperty('database', 'disconnected')
+    expect(response.data.services).toHaveProperty('cloudinary', 'not configured')
+    expect(response.data).toHaveProperty('message')
+    expect(response.data.message).toContain('database')
+    expect(response.data.message).toContain('cloudinary')
   })
 })

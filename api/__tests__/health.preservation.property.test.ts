@@ -71,12 +71,14 @@ describe('Property 2: Preservation - Normal Operation Unchanged', () => {
     expect(mockRes.json).toHaveBeenCalled()
     const response = mockRes.json.mock.calls[0][0]
     
-    expect(response).toHaveProperty('status', 'error')
-    expect(response).toHaveProperty('services')
-    expect(response.services).toHaveProperty('database', 'disconnected')
-    expect(response.services).toHaveProperty('cloudinary', 'configured')
-    expect(response).toHaveProperty('timestamp')
-    expect(response).toHaveProperty('message')
+    expect(response).toHaveProperty('success', false)
+    expect(response).toHaveProperty('data')
+    expect(response.data).toHaveProperty('status', 'error')
+    expect(response.data).toHaveProperty('services')
+    expect(response.data.services).toHaveProperty('database', 'disconnected')
+    expect(response.data.services).toHaveProperty('cloudinary', 'configured')
+    expect(response.data).toHaveProperty('timestamp')
+    expect(response.data).toHaveProperty('message')
   })
 
   /**
@@ -174,17 +176,21 @@ describe('Property 2: Preservation - Normal Operation Unchanged', () => {
           const response = mockRes.json.mock.calls[0][0]
           
           // Verify response structure
-          expect(response).toHaveProperty('status')
-          expect(response.status).toMatch(/^(ok|error)$/)
+          expect(response).toHaveProperty('success')
+          expect(typeof response.success).toBe('boolean')
+          expect(response).toHaveProperty('data')
           
-          expect(response).toHaveProperty('services')
-          expect(response.services).toHaveProperty('database')
-          expect(response.services.database).toMatch(/^(connected|disconnected)$/)
-          expect(response.services).toHaveProperty('cloudinary')
-          expect(response.services.cloudinary).toMatch(/^(configured|not configured)$/)
+          expect(response.data).toHaveProperty('status')
+          expect(response.data.status).toMatch(/^(ok|error)$/)
           
-          expect(response).toHaveProperty('timestamp')
-          expect(typeof response.timestamp).toBe('string')
+          expect(response.data).toHaveProperty('services')
+          expect(response.data.services).toHaveProperty('database')
+          expect(response.data.services.database).toMatch(/^(connected|disconnected)$/)
+          expect(response.data.services).toHaveProperty('cloudinary')
+          expect(response.data.services.cloudinary).toMatch(/^(configured|not configured)$/)
+          
+          expect(response.data).toHaveProperty('timestamp')
+          expect(typeof response.data.timestamp).toBe('string')
           
           // Verify status code is either 200 or 503
           const statusCode = mockRes.status.mock.calls[0][0]
