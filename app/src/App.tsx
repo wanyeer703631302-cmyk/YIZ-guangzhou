@@ -62,10 +62,10 @@ function App() {
     );
   }
 
-  // 如果后端不健康，显示维护模式
-  if (!isHealthy) {
-    return <MaintenanceMode error={healthError} healthData={healthData} onRetry={retryHealth} />;
-  }
+  // 临时禁用健康检查 - 直接显示内容
+  // if (!isHealthy) {
+  //   return <MaintenanceMode error={healthError} healthData={healthData} onRetry={retryHealth} />;
+  // }
 
   return (
     <div ref={containerRef} className="min-h-screen bg-black text-white overflow-x-hidden">
