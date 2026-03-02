@@ -129,8 +129,11 @@ class ApiClient {
     file: File,
     metadata?: UploadMetadata
   ): Promise<ApiResponse<Asset>> {
+    console.log('uploadAsset 调用, token:', this.token)
+    
     // 演示模式：如果使用演示账号，模拟上传成功
     if (this.token?.startsWith('demo-token-')) {
+      console.log('使用演示模式上传')
       // 模拟上传延迟
       await new Promise(resolve => setTimeout(resolve, 1500))
       
@@ -154,11 +157,14 @@ class ApiClient {
       demoAssets.unshift(demoAsset) // 添加到开头
       localStorage.setItem('demo_assets', JSON.stringify(demoAssets))
       
+      console.log('演示模式上传成功:', demoAsset)
       return {
         success: true,
         data: demoAsset
       }
     }
+
+    console.log('使用真实 API 上传')
 
     const formData = new FormData()
     formData.append('file', file)
