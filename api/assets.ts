@@ -7,7 +7,8 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { prisma } from '../lib/prisma'
+// Dynamic import to avoid initialization errors
+// import { prisma } from '../lib/prisma'
 
 /**
  * Standard API response interface
@@ -84,8 +85,8 @@ async function handleGetAssets(
   res: VercelResponse
 ): Promise<void> {
   try {
-    // Check if database is available
-    const { isDatabaseAvailable } = await import('../lib/prisma')
+    // Dynamically import prisma to avoid initialization errors
+    const { prisma, isDatabaseAvailable } = await import('../lib/prisma')
     
     if (!isDatabaseAvailable) {
       // Return empty result if database is not configured
