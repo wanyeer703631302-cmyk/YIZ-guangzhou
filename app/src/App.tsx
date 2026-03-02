@@ -7,7 +7,7 @@ import { TopRightIcons } from './components/TopRightIcons/TopRightIcons';
 import { TopSearchBar } from './components/TopSearchBar/TopSearchBar';
 import { FilterControl } from './components/FilterControl/FilterControl';
 import { UserSidebar } from './components/UserSidebar/UserSidebar';
-import { MaintenanceMode } from './components/MaintenanceMode/MaintenanceMode';
+// import { MaintenanceMode } from './components/MaintenanceMode/MaintenanceMode';
 import { useAssets } from './hooks/useAssets';
 import { useHealthCheck } from './hooks/useHealthCheck';
 import type { GalleryItem } from './types/gallery';
@@ -36,7 +36,8 @@ function App() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 健康检查
-  const { isChecking: isCheckingHealth, isHealthy, error: healthError, data: healthData, retry: retryHealth } = useHealthCheck();
+  const { isChecking: isCheckingHealth } = useHealthCheck();
+  // const { isChecking: isCheckingHealth, isHealthy, error: healthError, data: healthData, retry: retryHealth } = useHealthCheck();
 
   // 从API加载资源
   const { items: apiItems, isLoading, error, refetch } = useAssets();
