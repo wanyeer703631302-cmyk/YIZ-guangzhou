@@ -12,8 +12,6 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getDatabaseStatus, isDatabaseAvailable } from '../lib/prisma'
-import { isCloudinaryConfigured } from '../lib/cloudinary'
 
 /**
  * Health check response interface
@@ -34,49 +32,6 @@ interface HealthCheckResponse {
 const DB_CONNECTION_TIMEOUT = 5000
 
 /**
- * Check database status with timeout
- * 
- * Wraps the database status check with a timeout to prevent long waits
- */
-async function checkDatabaseWithTimeout(): Promise<'connected' | 'disconnected'> {
-  // Check if database is configured before attempting connection
-  if (!isDatabaseAvailable) {
-    return 'disconnected'
-  }
-
-  try {
-    // Create a timeout promise
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Database connection timeout')), DB_CONNECTION_TIMEOUT)
-    })
-
-    // Race between database check and timeout
-    const dbStatus = await Promise.race([
-      getDatabaseStatus(),
-      timeoutPromise
-    ])
-
-    return dbStatus.connected ? 'connected' : 'disconnected'
-  } catch (error) {
-    // Handle timeout or other errors
-    console.error('Database connection check error:', error)
-    return 'disconnected'
-  }
-}
-
-/**
- * Check Cloudinary configuration status
- */
-function checkCloudinaryStatus(): 'configured' | 'not configured' {
-  try {
-    return isCloudinaryConfigured() ? 'configured' : 'not configured'
-  } catch (error) {
-    console.error('Cloudinary configuration check error:', error)
-    return 'not configured'
-  }
-}
-
-/**
  * Health check handler
  * 
  * Checks the status of all critical services and returns a standardized response
@@ -95,6 +50,62 @@ export default async function handler(
   }
 
   try {
+    // Dynamically import dependencies to handle import errors gracefully
+    let getDatabaseStatus: any
+    let isDatabaseAvailable: boolean = false
+    let isCloudinaryConfigured: any
+
+    try {
+      const prismaModule = await import('../lib/prisma')
+      getDatabaseStatus = prismaModule.getDatabaseStatus
+      isDatabaseAvailable = prismaModule.isDatabaseAvailable
+    } catch (error) {
+      console.error('Failed to import prisma module:', error)
+      getDatabaseStatus = async () => ({ connected: false, error: 'Prisma module failed to load' })
+      isDatabaseAvailable = false
+    }
+
+    try {
+      const cloudinaryModule = await import('../lib/cloudinary')
+      isCloudinaryConfigured = cloudinaryModule.isCloudinaryConfigured
+    } catch (error) {
+      console.error('Failed to import cloudinary module:', error)
+      isCloudinaryConfigured = () => false
+    }
+
+    // Check database status with timeout
+    const checkDatabaseWithTimeout = async (): Promise<'connected' | 'disconnected'> => {
+      if (!isDatabaseAvailable) {
+        return 'disconnected'
+      }
+
+      try {
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Database connection timeout')), DB_CONNECTION_TIMEOUT)
+        })
+
+        const dbStatus = await Promise.race([
+          getDatabaseStatus(),
+          timeoutPromise
+        ])
+
+        return dbStatus.connected ? 'connected' : 'disconnected'
+      } catch (error) {
+        console.error('Database connection check error:', error)
+        return 'disconnected'
+      }
+    }
+
+    // Check Cloudinary configuration status
+    const checkCloudinaryStatus = (): 'configured' | 'not configured' => {
+      try {
+        return isCloudinaryConfigured() ? 'configured' : 'not configured'
+      } catch (error) {
+        console.error('Cloudinary configuration check error:', error)
+        return 'not configured'
+      }
+    }
+
     // Check all services with error handling
     const [databaseStatus, cloudinaryStatus] = await Promise.all([
       checkDatabaseWithTimeout().catch(error => {
