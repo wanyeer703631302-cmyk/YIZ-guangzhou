@@ -7,23 +7,49 @@ import { v2 as cloudinary } from 'cloudinary'
  * 需求: 1.3
  */
 
-// 配置Cloudinary客户端
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-})
-
 /**
  * 验证Cloudinary配置是否完整
  * @returns 配置是否有效
  */
 export function isCloudinaryConfigured(): boolean {
-  return !!(
-    process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET
-  )
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME
+  const apiKey = process.env.CLOUDINARY_API_KEY
+  const apiSecret = process.env.CLOUDINARY_API_SECRET
+
+  const missingVars: string[] = []
+  
+  if (!cloudName) missingVars.push('CLOUDINARY_CLOUD_NAME')
+  if (!apiKey) missingVars.push('CLOUDINARY_API_KEY')
+  if (!apiSecret) missingVars.push('CLOUDINARY_API_SECRET')
+
+  if (missingVars.length > 0) {
+    console.warn(
+      `[Cloudinary] 配置不完整 - 缺失环境变量: ${missingVars.join(', ')}. ` +
+      `文件上传功能将不可用。请设置这些环境变量以启用Cloudinary功能。`
+    )
+    return false
+  }
+
+  return true
+}
+
+// 验证配置并记录警告
+const configured = isCloudinaryConfigured()
+
+// 只在配置完整时初始化Cloudinary客户端
+if (configured) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  })
+} else {
+  // 配置缺失时，设置空配置以避免运行时错误
+  cloudinary.config({
+    cloud_name: '',
+    api_key: '',
+    api_secret: '',
+  })
 }
 
 /**

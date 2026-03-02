@@ -8,11 +8,11 @@
  * - Cloudinary configuration status
  * - Environment variables validation
  * 
- * Validates Requirements: 1.5, 12.3, 12.4, 12.6
+ * Validates Requirements: 1.5, 12.3, 12.4, 12.6, 2.3, 3.3
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getDatabaseStatus } from '../lib/prisma'
+import { getDatabaseStatus, isDatabaseAvailable } from '../lib/prisma'
 import { isCloudinaryConfigured } from '../lib/cloudinary'
 
 /**
@@ -26,6 +26,54 @@ interface HealthCheckResponse {
   }
   timestamp: string
   message?: string
+}
+
+/**
+ * Timeout duration for database connection check (in milliseconds)
+ */
+const DB_CONNECTION_TIMEOUT = 5000
+
+/**
+ * Check database status with timeout
+ * 
+ * Wraps the database status check with a timeout to prevent long waits
+ */
+async function checkDatabaseWithTimeout(): Promise<'connected' | 'disconnected'> {
+  // Check if database is configured before attempting connection
+  if (!isDatabaseAvailable) {
+    return 'disconnected'
+  }
+
+  try {
+    // Create a timeout promise
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Database connection timeout')), DB_CONNECTION_TIMEOUT)
+    })
+
+    // Race between database check and timeout
+    const dbStatus = await Promise.race([
+      getDatabaseStatus(),
+      timeoutPromise
+    ])
+
+    return dbStatus.connected ? 'connected' : 'disconnected'
+  } catch (error) {
+    // Handle timeout or other errors
+    console.error('Database connection check error:', error)
+    return 'disconnected'
+  }
+}
+
+/**
+ * Check Cloudinary configuration status
+ */
+function checkCloudinaryStatus(): 'configured' | 'not configured' {
+  try {
+    return isCloudinaryConfigured() ? 'configured' : 'not configured'
+  } catch (error) {
+    console.error('Cloudinary configuration check error:', error)
+    return 'not configured'
+  }
 }
 
 /**
@@ -47,23 +95,18 @@ export default async function handler(
   }
 
   try {
-    // Check database connection status
-    const dbStatus = await getDatabaseStatus()
-    const databaseStatus = dbStatus.connected ? 'connected' : 'disconnected'
+    // Check all services with error handling
+    const [databaseStatus, cloudinaryStatus] = await Promise.all([
+      checkDatabaseWithTimeout().catch(error => {
+        console.error('Database check failed:', error)
+        return 'disconnected' as const
+      }),
+      Promise.resolve(checkCloudinaryStatus())
+    ])
 
-    // Check Cloudinary configuration status
-    const cloudinaryStatus = isCloudinaryConfigured() 
-      ? 'configured' 
-      : 'not configured'
-
-    // Determine overall health status
-    const overallStatus = dbStatus.connected && isCloudinaryConfigured()
-      ? 'ok'
-      : 'error'
-
-    // Build response
+    // Build response with service status
     const response: HealthCheckResponse = {
-      status: overallStatus,
+      status: 'ok',
       services: {
         database: databaseStatus,
         cloudinary: cloudinaryStatus
@@ -71,25 +114,42 @@ export default async function handler(
       timestamp: new Date().toISOString()
     }
 
-    // Add error message if any service is down
-    if (overallStatus === 'error') {
-      const issues: string[] = []
-      if (!dbStatus.connected) {
-        issues.push('database connection failed')
+    // Determine overall status and HTTP status code
+    let httpStatusCode = 200
+    const issues: string[] = []
+
+    // Check database status
+    if (databaseStatus === 'disconnected') {
+      response.status = 'error'
+      httpStatusCode = 503
+      if (!isDatabaseAvailable) {
+        issues.push('database: DATABASE_URL not configured')
+      } else {
+        issues.push('database: connection failed')
       }
-      if (!isCloudinaryConfigured()) {
-        issues.push('cloudinary not configured')
+    }
+
+    // Check Cloudinary status
+    if (cloudinaryStatus === 'not configured') {
+      response.status = 'error'
+      // Only set to 503 if not already set (database takes precedence)
+      if (httpStatusCode === 200) {
+        httpStatusCode = 503
       }
+      issues.push('cloudinary: not configured')
+    }
+
+    // Add summary message if there are issues
+    if (issues.length > 0) {
       response.message = `Service issues detected: ${issues.join(', ')}`
     }
 
-    // Return appropriate status code
-    const statusCode = overallStatus === 'ok' ? 200 : 503
-
-    res.status(statusCode).json(response)
+    res.status(httpStatusCode).json(response)
   } catch (error) {
-    // Handle unexpected errors
+    // Handle unexpected errors with detailed information
     console.error('Health check error:', error)
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     
     res.status(500).json({
       status: 'error',
@@ -98,7 +158,7 @@ export default async function handler(
         cloudinary: 'not configured'
       },
       timestamp: new Date().toISOString(),
-      message: 'Health check failed due to internal error'
+      message: `Health check failed due to internal error: ${errorMessage}`
     })
   }
 }

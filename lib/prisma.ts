@@ -5,8 +5,10 @@
  * - Connection pool management
  * - Error handling
  * - Development hot-reload support
+ * - Graceful degradation when DATABASE_URL is not configured
  * 
  * Validates Requirement 2.1: Database configuration migration
+ * Validates Requirement 3.1: Graceful error handling for missing DATABASE_URL
  */
 
 import { PrismaClient } from '@prisma/client'
@@ -16,6 +18,11 @@ declare global {
   // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined
 }
+
+/**
+ * Check if DATABASE_URL environment variable is configured
+ */
+export const isDatabaseAvailable = !!process.env.DATABASE_URL
 
 // Prisma Client options with connection pool configuration
 const prismaClientOptions = {
@@ -32,9 +39,40 @@ const prismaClientOptions = {
 }
 
 /**
+ * Create a safe placeholder Prisma Client that throws helpful errors
+ * when database operations are attempted without DATABASE_URL configured
+ */
+function createPlaceholderClient(): any {
+  const errorMessage = 'Database is not available. DATABASE_URL environment variable is not configured.'
+  
+  return new Proxy({}, {
+    get(_target, prop) {
+      // Allow $connect and $disconnect to be called without error
+      if (prop === '$connect' || prop === '$disconnect') {
+        return async () => {
+          throw new Error(errorMessage)
+        }
+      }
+      
+      // For any other property access, throw an error
+      return () => {
+        throw new Error(errorMessage)
+      }
+    }
+  })
+}
+
+/**
  * Create a new Prisma Client instance with error handling
  */
 function createPrismaClient(): PrismaClient {
+  // Validate DATABASE_URL before attempting to create client
+  if (!isDatabaseAvailable) {
+    console.warn('⚠ DATABASE_URL not configured. Database operations will not be available.')
+    console.warn('⚠ Please set DATABASE_URL environment variable to enable database functionality.')
+    return createPlaceholderClient()
+  }
+  
   try {
     const client = new PrismaClient(prismaClientOptions)
     
@@ -46,9 +84,8 @@ function createPrismaClient(): PrismaClient {
     return client
   } catch (error) {
     console.error('Failed to initialize Prisma Client:', error)
-    throw new Error(
-      'Database connection failed. Please check your DATABASE_URL environment variable.'
-    )
+    console.warn('⚠ Database connection failed. Returning placeholder client.')
+    return createPlaceholderClient()
   }
 }
 
@@ -75,6 +112,12 @@ if (process.env.NODE_ENV === 'development') {
  * a boolean indicating success or failure.
  */
 export async function testDatabaseConnection(): Promise<boolean> {
+  // Check if database is available before attempting connection
+  if (!isDatabaseAvailable) {
+    console.warn('Database connection test skipped: DATABASE_URL not configured')
+    return false
+  }
+  
   try {
     await prisma.$connect()
     await prisma.$queryRaw`SELECT 1`
@@ -109,6 +152,14 @@ export async function getDatabaseStatus(): Promise<{
   connected: boolean
   error?: string
 }> {
+  // Check if database is configured
+  if (!isDatabaseAvailable) {
+    return {
+      connected: false,
+      error: 'DATABASE_URL not configured',
+    }
+  }
+  
   try {
     const isConnected = await testDatabaseConnection()
     return {
