@@ -7,6 +7,7 @@ import { TopRightIcons } from './components/TopRightIcons/TopRightIcons';
 import { TopSearchBar } from './components/TopSearchBar/TopSearchBar';
 import { FilterControl } from './components/FilterControl/FilterControl';
 import { UserSidebar } from './components/UserSidebar/UserSidebar';
+import { ImageUpload } from './components/upload/ImageUpload';
 // import { MaintenanceMode } from './components/MaintenanceMode/MaintenanceMode';
 import { useAssets } from './hooks/useAssets';
 // import { useHealthCheck } from './hooks/useHealthCheck';
@@ -93,6 +94,36 @@ function App() {
       />
       <TopSearchBar isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
       <UserSidebar isOpen={userSidebarOpen} onClose={() => setUserSidebarOpen(false)} />
+      
+      {/* 上传对话框 */}
+      {uploadOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+          onClick={() => setUploadOpen(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-2xl"
+          >
+            <ImageUpload
+              onUploadSuccess={(asset) => {
+                console.log('上传成功:', asset)
+                refetch() // 重新加载资源列表
+              }}
+              onUploadComplete={() => {
+                setUploadOpen(false)
+              }}
+            />
+          </motion.div>
+        </motion.div>
+      )}
 
       <main className="relative z-10">
         <section className="min-h-screen flex items-center justify-center" id="work">
