@@ -175,6 +175,28 @@ class ApiClient {
     email: string,
     password: string
   ): Promise<ApiResponse<AuthData>> {
+    // 演示模式：允许使用演示账号直接登录
+    if (email === 'demo@yiz.com' && password === 'demo123') {
+      const demoAuthData: AuthData = {
+        token: 'demo-token-' + Date.now(),
+        user: {
+          id: 'demo-user-id',
+          email: 'demo@yiz.com',
+          name: '演示用户',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      }
+      
+      this.token = demoAuthData.token
+      localStorage.setItem('auth_token', demoAuthData.token)
+      
+      return {
+        success: true,
+        data: demoAuthData
+      }
+    }
+
     const response = await this.request<AuthData>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -215,6 +237,22 @@ class ApiClient {
    * 验证令牌是否有效
    */
   async getSession(): Promise<ApiResponse<{ user: User }>> {
+    // 演示模式：如果是演示令牌，返回演示用户信息
+    if (this.token?.startsWith('demo-token-')) {
+      return {
+        success: true,
+        data: {
+          user: {
+            id: 'demo-user-id',
+            email: 'demo@yiz.com',
+            name: '演示用户',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+        }
+      }
+    }
+
     return this.request('/auth/session')
   }
 
