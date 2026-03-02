@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "Full-stack 3D image gallery with backend integration",
-  "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:api\"",
     "dev:frontend": "cd app && npm run dev",
