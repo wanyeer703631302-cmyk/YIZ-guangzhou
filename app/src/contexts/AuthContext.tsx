@@ -58,18 +58,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // 登录方法
   const login = async (email: string, password: string) => {
     try {
+      console.log('AuthContext: 开始登录', email)
       const response = await apiClient.login(email, password)
+      console.log('AuthContext: 登录响应', response)
       
       if (response.success && response.data) {
+        console.log('AuthContext: 设置用户', response.data.user)
         setUser(response.data.user)
         return { success: true }
       } else {
+        console.error('AuthContext: 登录失败', response.error)
         return {
           success: false,
           error: response.error || '登录失败'
         }
       }
     } catch (error) {
+      console.error('AuthContext: 登录异常', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : '网络错误'

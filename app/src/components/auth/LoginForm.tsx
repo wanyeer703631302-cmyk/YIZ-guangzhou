@@ -53,16 +53,21 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
     setLoading(true)
 
     try {
+      console.log('尝试登录:', email)
       const response = await apiClient.login(email, password)
+      console.log('登录响应:', response)
 
       if (response.success) {
         // 登录成功
+        console.log('登录成功')
         onSuccess?.()
       } else {
         // 显示错误消息
+        console.error('登录失败:', response.error)
         setError(response.error || '登录失败，请重试')
       }
     } catch (err) {
+      console.error('登录异常:', err)
       setError('网络错误，请检查您的连接')
     } finally {
       setLoading(false)
