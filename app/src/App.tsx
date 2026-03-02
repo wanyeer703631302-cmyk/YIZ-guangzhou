@@ -9,7 +9,7 @@ import { FilterControl } from './components/FilterControl/FilterControl';
 import { UserSidebar } from './components/UserSidebar/UserSidebar';
 // import { MaintenanceMode } from './components/MaintenanceMode/MaintenanceMode';
 import { useAssets } from './hooks/useAssets';
-import { useHealthCheck } from './hooks/useHealthCheck';
+// import { useHealthCheck } from './hooks/useHealthCheck';
 import type { GalleryItem } from './types/gallery';
 
 // 保留硬编码数据作为后备
@@ -35,8 +35,8 @@ function App() {
   const [userSidebarOpen, setUserSidebarOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 健康检查
-  const { isChecking: isCheckingHealth } = useHealthCheck();
+  // 临时完全禁用健康检查
+  // const { isChecking: isCheckingHealth } = useHealthCheck();
   // const { isChecking: isCheckingHealth, isHealthy, error: healthError, data: healthData, retry: retryHealth } = useHealthCheck();
 
   // 从API加载资源
@@ -51,17 +51,17 @@ function App() {
     { id: 3, name: '@design_collective' }
   ];
 
-  // 如果正在检查健康状态，显示加载界面
-  if (isCheckingHealth) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4" />
-          <p className="text-white/60">正在连接后端服务...</p>
-        </div>
-      </div>
-    );
-  }
+  // 临时禁用健康检查 - 直接显示内容
+  // if (isCheckingHealth) {
+  //   return (
+  //     <div className="min-h-screen bg-black text-white flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="inline-block w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4" />
+  //         <p className="text-white/60">正在连接后端服务...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   // 临时禁用健康检查 - 直接显示内容
   // if (!isHealthy) {
