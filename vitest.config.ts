@@ -27,6 +27,8 @@ export default defineConfig({
       'lib/**/*.test.ts',
       'api/**/*.property.test.ts',
       'lib/**/*.property.test.ts',
+      'app/src/**/*.test.ts',
+      'app/src/**/*.property.test.ts',
     ],
   },
 })

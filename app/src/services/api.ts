@@ -53,7 +53,27 @@ class ApiClient {
         headers,
       })
 
-      const data = await response.json()
+      // 检查Content-Type以确定如何解析响应
+      const contentType = response.headers.get('content-type')
+      const isJson = contentType?.includes('application/json')
+
+      let data: any
+
+      if (isJson) {
+        // JSON响应 - 使用现有逻辑
+        data = await response.json()
+      } else {
+        // 非JSON响应 - 先读取为文本
+        const text = await response.text()
+        
+        // 尝试解析为JSON（处理Content-Type错误但内容是JSON的情况）
+        try {
+          data = JSON.parse(text)
+        } catch {
+          // 如果不是有效JSON，包装成ApiResponse格式
+          data = { error: text || 'Empty response' }
+        }
+      }
 
       if (!response.ok) {
         return {
