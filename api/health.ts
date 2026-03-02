@@ -155,7 +155,10 @@ export default async function handler(
       response.message = `Service issues detected: ${issues.join(', ')}`
     }
 
-    res.status(httpStatusCode).json(response)
+    res.status(httpStatusCode).json({
+      success: httpStatusCode === 200,
+      data: response
+    })
   } catch (error) {
     // Handle unexpected errors with detailed information
     console.error('Health check error:', error)
@@ -163,13 +166,17 @@ export default async function handler(
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     
     res.status(500).json({
-      status: 'error',
-      services: {
-        database: 'disconnected',
-        cloudinary: 'not configured'
-      },
-      timestamp: new Date().toISOString(),
-      message: `Health check failed due to internal error: ${errorMessage}`
+      success: false,
+      error: `Health check failed due to internal error: ${errorMessage}`,
+      data: {
+        status: 'error',
+        services: {
+          database: 'disconnected',
+          cloudinary: 'not configured'
+        },
+        timestamp: new Date().toISOString(),
+        message: `Health check failed due to internal error: ${errorMessage}`
+      }
     })
   }
 }
