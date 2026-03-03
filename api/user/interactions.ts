@@ -8,8 +8,8 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 // Dynamic import to avoid initialization errors
-// import { prisma } from '../../lib/prisma'
-import { withAuth, AuthRequest } from '../../lib/auth'
+// import { prisma } from '../_lib/prisma'
+import { withAuth, AuthRequest } from '../_lib/auth'
 
 /**
  * Standard API response interface
@@ -164,3 +164,4 @@ async function handleGetInteractions(
     }
   })
 }
+

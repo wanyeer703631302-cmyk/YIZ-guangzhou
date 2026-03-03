@@ -8,8 +8,8 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { prisma } from '../lib/prisma'
-import { withAuth, AuthRequest } from '../lib/auth'
+import { prisma } from './_lib/prisma'
+import { withAuth, AuthRequest } from './_lib/auth'
 
 /**
  * Standard API response interface
@@ -77,7 +77,7 @@ async function handleCreateFavorite(
       if (!assetId) {
         res.status(400).json({
           success: false,
-          error: '缺少必需参数: assetId'
+          error: '缺�?必�??�数: assetId'
         })
         return
       }
@@ -90,7 +90,7 @@ async function handleCreateFavorite(
       if (!asset) {
         res.status(404).json({
           success: false,
-          error: '资源不存在'
+          error: '资�?不�???
         })
         return
       }
@@ -145,7 +145,7 @@ async function handleCreateFavorite(
       console.error('Create favorite error:', errorMessage)
       res.status(500).json({
         success: false,
-        error: '创建收藏失败，请稍后重试'
+        error: '?�建?��?失败，请稍�??��?'
       })
     }
   })
@@ -176,7 +176,7 @@ async function handleDeleteFavorite(
       if (!favoriteId) {
         res.status(400).json({
           success: false,
-          error: '缺少必需参数: id'
+          error: '缺�?必�??�数: id'
         })
         return
       }
@@ -189,7 +189,7 @@ async function handleDeleteFavorite(
       if (!favorite) {
         res.status(404).json({
           success: false,
-          error: '收藏记录不存在'
+          error: '?��?记�?不�???
         })
         return
       }
@@ -198,7 +198,7 @@ async function handleDeleteFavorite(
       if (favorite.userId !== authReq.userId) {
         res.status(403).json({
           success: false,
-          error: '无权删除此收藏记录'
+          error: '?��??�除此收?�记�?
         })
         return
       }
@@ -219,8 +219,9 @@ async function handleDeleteFavorite(
       console.error('Delete favorite error:', errorMessage)
       res.status(500).json({
         success: false,
-        error: '删除收藏失败，请稍后重试'
+        error: '?�除?��?失败，请稍�??��?'
       })
     }
   })
 }
+

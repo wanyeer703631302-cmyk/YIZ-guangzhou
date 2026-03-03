@@ -5,8 +5,8 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import bcrypt from 'bcryptjs'
-import { prisma } from '../../lib/prisma'
-import { generateToken } from '../../lib/auth'
+import { prisma } from '../_lib/prisma'
+import { generateToken } from '../_lib/auth'
 
 interface ApiResponse<T = any> {
   success: boolean
@@ -152,3 +152,4 @@ export default async function handler(
     })
   }
 }
+

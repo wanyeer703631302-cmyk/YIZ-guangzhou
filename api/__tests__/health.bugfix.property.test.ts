@@ -222,3 +222,4 @@ describe('Property 1: Fault Condition - Graceful Error Handling', () => {
     expect(response.data.message).toContain('cloudinary')
   })
 })
+

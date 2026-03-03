@@ -4,8 +4,8 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { prisma } from '../../lib/prisma'
-import { withAuth, AuthRequest } from '../../lib/auth'
+import { prisma } from '../_lib/prisma'
+import { withAuth, AuthRequest } from '../_lib/auth'
 
 interface ApiResponse<T = any> {
   success: boolean
@@ -86,3 +86,4 @@ export default async function handler(
     }
   })
 }
+

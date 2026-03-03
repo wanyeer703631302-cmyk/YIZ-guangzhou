@@ -117,12 +117,12 @@ describe('Property 1: Fault Condition - Database Record Creation Failure Detecti
     const response = mockRes.json.mock.calls[0]?.[0]
     expect(response).toHaveProperty('success', false)
     expect(response).toHaveProperty('error')
-    expect(response.error).toMatch(/数据库|database/i)
+    expect(response.error).toMatch(/?�据库|database/i)
 
     // Assert: Cloudinary upload should ideally not be attempted (for fixed code)
     // On unfixed code, this may have been called, creating an orphaned file
     if (mockUploadImage.mock.calls.length > 0) {
-      console.warn('⚠️ BUG DETECTED: Cloudinary upload was attempted despite database unavailability')
+      console.warn('?��? BUG DETECTED: Cloudinary upload was attempted despite database unavailability')
       console.warn('   This creates orphaned files in Cloudinary without database records')
     }
   })
@@ -229,7 +229,7 @@ describe('Property 1: Fault Condition - Database Record Creation Failure Detecti
     // On unfixed code, this may return 500 with database error
     // On fixed code, this should return 401 with authentication error
     if (statusCode === 500) {
-      console.warn('⚠️ BUG DETECTED: userId validation missing, database constraint error occurred')
+      console.warn('?��? BUG DETECTED: userId validation missing, database constraint error occurred')
       console.warn('   Expected: 401 with authentication error')
       console.warn('   Actual: 500 with database error')
     }
@@ -332,7 +332,7 @@ describe('Property 1: Fault Condition - Database Record Creation Failure Detecti
     const response = mockRes.json.mock.calls[0]?.[0]
     expect(response).toHaveProperty('success', false)
     expect(response).toHaveProperty('error')
-    expect(response.error).toMatch(/数据库|database/i)
+    expect(response.error).toMatch(/?�据库|database/i)
   })
 
   /**
@@ -449,7 +449,7 @@ describe('Property 1: Fault Condition - Database Record Creation Failure Detecti
 
     // Assert: Cloudinary cleanup should be called (on fixed code)
     if (mockDestroyImage.mock.calls.length === 0) {
-      console.warn('⚠️ BUG DETECTED: Cloudinary file not cleaned up after database failure')
+      console.warn('?��? BUG DETECTED: Cloudinary file not cleaned up after database failure')
       console.warn('   This creates orphaned files in Cloudinary')
       console.warn('   Expected: cloudinary.uploader.destroy() to be called with public_id')
     } else {
@@ -573,3 +573,4 @@ describe('Property 1: Fault Condition - Database Record Creation Failure Detecti
     )
   })
 })
+

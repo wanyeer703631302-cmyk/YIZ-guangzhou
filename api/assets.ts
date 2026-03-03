@@ -8,7 +8,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 // Dynamic import to avoid initialization errors
-// import { prisma } from '../lib/prisma'
+// import { prisma } from './_lib/prisma'
 
 /**
  * Standard API response interface
@@ -255,3 +255,4 @@ async function handleGetAssets(
     })
   }
 }
+

@@ -233,7 +233,7 @@ describe('User Interactions API - GET /api/user/interactions', () => {
     expect(statusMock).toHaveBeenCalledWith(500)
     expect(jsonMock).toHaveBeenCalledWith({
       success: false,
-      error: '获取用户交互数据失败，请稍后重试'
+      error: '?��??�户交�??�据失败，请稍�??��?'
     })
   })
 
@@ -322,3 +322,4 @@ describe('User Interactions API - GET /api/user/interactions', () => {
     )
   })
 })
+

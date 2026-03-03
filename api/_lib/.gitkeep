@@ -1,0 +1,8 @@
+# Shared Library Directory
+
+This directory contains shared utility modules used by both frontend and backend.
+
+## Structure
+- `prisma.ts` - Prisma client singleton
+- `auth.ts` - Authentication utilities (JWT, middleware)
+- `cloudinary.ts` - Cloudinary configuration and helpers

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { prisma } from '../../../lib/prisma'
+import { prisma } from '../../_lib/prisma'
 
 /**
  * Asset-Tag Association API endpoints

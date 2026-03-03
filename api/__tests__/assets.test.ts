@@ -324,3 +324,4 @@ describe('Assets API - GET /api/assets', () => {
     })
   })
 })
+

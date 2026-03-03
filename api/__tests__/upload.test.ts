@@ -94,7 +94,7 @@ describe('Upload API - POST /api/upload', () => {
     expect(statusMock).toHaveBeenCalledWith(400)
     expect(jsonMock).toHaveBeenCalledWith({
       success: false,
-      error: expect.stringContaining('文件')
+      error: expect.stringContaining('?�件')
     })
   })
 
@@ -144,7 +144,7 @@ describe('Upload API - POST /api/upload', () => {
     expect(statusMock).toHaveBeenCalledWith(400)
     expect(jsonMock).toHaveBeenCalledWith({
       success: false,
-      error: expect.stringContaining('图片')
+      error: expect.stringContaining('?��?')
     })
   })
 
@@ -242,7 +242,7 @@ describe('Upload API - POST /api/upload', () => {
     expect(statusMock).toHaveBeenCalledWith(500)
     expect(jsonMock).toHaveBeenCalledWith({
       success: false,
-      error: expect.stringContaining('云存储')
+      error: expect.stringContaining('云�???)
     })
   })
 
@@ -274,7 +274,7 @@ describe('Upload API - POST /api/upload', () => {
     expect(statusMock).toHaveBeenCalledWith(500)
     expect(jsonMock).toHaveBeenCalledWith({
       success: false,
-      error: expect.stringContaining('数据库')
+      error: expect.stringContaining('?�据�?)
     })
   })
 
@@ -379,3 +379,4 @@ describe('Upload API - POST /api/upload', () => {
     }
   })
 })
+

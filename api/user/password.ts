@@ -1,13 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { withAuth, type AuthRequest, generateToken } from '../../lib/auth'
-import { prisma } from '../../lib/prisma'
-import { validatePasswordComplexity, hashPassword, verifyPassword } from '../../lib/password'
-import { createAuditLog } from '../../lib/audit'
+import { withAuth, type AuthRequest, generateToken } from '../_lib/auth'
+import { prisma } from '../_lib/prisma'
+import { validatePasswordComplexity, hashPassword, verifyPassword } from '../_lib/password'
+import { createAuditLog } from '../_lib/audit'
 
 /**
- * 密码管理API端点
+ * 密�?管�?API端点
  * 
- * POST /api/user/password - 修改密码（普通用户和管理员）
+ * POST /api/user/password - 修改密�?（普?�用?��?管�??��?
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const authReq = req as AuthRequest
 
-  // 需要认证
+  // ?�要认�?
   await new Promise<void>((resolve) => {
     withAuth(authReq, res, resolve)
   })
@@ -27,26 +27,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { currentPassword, newPassword, isForceChange } = req.body
 
-  // 验证必填字段
+  // 验�?必填字段
   if (!currentPassword || !newPassword) {
     return res.status(400).json({
       success: false,
-      error: '当前密码和新密码为必填项'
+      error: '当�?密�??�新密�?为�?填项'
     })
   }
 
-  // 验证新密码复杂度
+  // 验�??��??��??�度
   const validation = validatePasswordComplexity(newPassword)
   if (!validation.valid) {
     return res.status(400).json({
       success: false,
-      error: '密码不符合复杂度要求',
+      error: '密�?不符?��??�度要�?',
       details: validation.errors
     })
   }
 
   try {
-    // 获取用户信息
+    // ?��??�户信息
     const user = await prisma.user.findUnique({
       where: { id: authReq.userId }
     })
@@ -54,34 +54,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!user) {
       return res.status(404).json({
         success: false,
-        error: '用户不存在'
+        error: '?�户不�???
       })
     }
 
-    // 验证当前密码
+    // 验�?当�?密�?
     const isPasswordValid = await verifyPassword(currentPassword, user.password)
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        error: '当前密码不正确'
+        error: '当�?密�?不正�?
       })
     }
 
-    // 如果是强制修改，防止重用临时密码
+    // 如�??�强?�修?��??�止?�用临时密�?
     if (isForceChange && user.requirePasswordChange) {
       const isSamePassword = await verifyPassword(newPassword, user.password)
       if (isSamePassword) {
         return res.status(400).json({
           success: false,
-          error: '新密码不能与临时密码相同'
+          error: '?��??��??��?临时密�??��?'
         })
       }
     }
 
-    // 哈希新密码
+    // ?��??��???
     const hashedPassword = await hashPassword(newPassword)
 
-    // 更新密码并清除requirePasswordChange标记
+    // ?�新密�?并�??�requirePasswordChange?�记
     await prisma.user.update({
       where: { id: authReq.userId },
       data: {
@@ -90,7 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     })
 
-    // 记录审计日志
+    // 记�?审计?��?
     await createAuditLog(
       'USER_PASSWORD_CHANGED',
       authReq.userId,
@@ -101,12 +101,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       req
     )
 
-    // 生成新的token（不再包含requirePasswordChange标记）
+    // ?��??��?token（�??��??�requirePasswordChange?�记�?
     const newToken = generateToken(user.id, user.role, false)
 
     return res.status(200).json({
       success: true,
-      message: '密码修改成功',
+      message: '密�?修改?��?',
       data: {
         token: newToken
       }
@@ -115,7 +115,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('Password change error:', error)
     return res.status(500).json({
       success: false,
-      error: '密码修改失败'
+      error: '密�?修改失败'
     })
   }
 }
+
