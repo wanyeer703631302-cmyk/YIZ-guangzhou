@@ -41,16 +41,21 @@ export default async function handler(
   }
 
   try {
+    console.log('Login attempt started')
+    
     const { email, password } = req.body
 
     // Validate required fields
     if (!email || !password) {
+      console.log('Missing email or password')
       res.status(400).json({
         success: false,
         error: 'Email and password are required'
       })
       return
     }
+
+    console.log('Attempting to query user:', email)
 
     // Find user by email using raw SQL to match actual database schema
     const users = await prisma.$queryRaw<Array<{
@@ -68,7 +73,10 @@ export default async function handler(
       WHERE email = ${email}
     `
 
+    console.log('Query result:', users.length, 'users found')
+
     if (users.length === 0) {
+      console.log('User not found')
       res.status(401).json({
         success: false,
         error: 'Invalid email or password'
@@ -77,9 +85,11 @@ export default async function handler(
     }
 
     const user = users[0]
+    console.log('User found:', user.id, 'role:', user.role)
 
     // Check if user account is displayed (active)
     if (!user.is_displayed) {
+      console.log('User account is disabled')
       res.status(403).json({
         success: false,
         error: 'Account is disabled'
@@ -89,6 +99,7 @@ export default async function handler(
 
     // Check if password hash exists
     if (!user.password_hash) {
+      console.log('No password hash found')
       res.status(401).json({
         success: false,
         error: 'Invalid email or password'
@@ -96,10 +107,12 @@ export default async function handler(
       return
     }
 
+    console.log('Verifying password')
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash)
 
     if (!isPasswordValid) {
+      console.log('Password verification failed')
       res.status(401).json({
         success: false,
         error: 'Invalid email or password'
@@ -107,9 +120,11 @@ export default async function handler(
       return
     }
 
+    console.log('Password verified, generating token')
     // Generate JWT token with role
     const token = generateToken(user.id, user.role as any, false)
 
+    console.log('Token generated successfully')
     // Return success response with mapped field names
     const response: ApiResponse<AuthResponse & { requirePasswordChange: boolean, role: string }> = {
       success: true,
@@ -130,9 +145,10 @@ export default async function handler(
     res.status(200).json(response)
   } catch (error) {
     console.error('Login error:', error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     res.status(500).json({
       success: false,
-      error: 'Failed to login'
+      error: 'Failed to login: ' + (error instanceof Error ? error.message : 'Unknown error')
     })
   }
 }
