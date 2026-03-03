@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { apiClient } from '../services/api'
 import type { Asset } from '../types/api'
 import type { GalleryItem } from '../types/gallery'
+
+interface UseAssetsOptions {
+  tagIds?: string[]
+}
 
 interface UseAssetsReturn {
   items: GalleryItem[]
@@ -29,18 +33,29 @@ function assetToGalleryItem(asset: Asset): GalleryItem {
 /**
  * 资源加载Hook
  * 从API获取资源列表并转换为GalleryItem格式
+ * 支持按标签筛选
  */
-export function useAssets(): UseAssetsReturn {
+export function useAssets(options?: UseAssetsOptions): UseAssetsReturn {
   const [items, setItems] = useState<GalleryItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Memoize tagIds to prevent unnecessary re-fetches
+  const tagIdsKey = useMemo(() => {
+    return options?.tagIds?.sort().join(',') || ''
+  }, [options?.tagIds])
 
   const fetchAssets = async () => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await apiClient.getAssets()
+      const params: any = {}
+      if (options?.tagIds && options.tagIds.length > 0) {
+        params.tagIds = options.tagIds
+      }
+
+      const response = await apiClient.getAssets(params)
 
       if (response.success && response.data) {
         const galleryItems = response.data.items.map(assetToGalleryItem)
@@ -57,7 +72,7 @@ export function useAssets(): UseAssetsReturn {
 
   useEffect(() => {
     fetchAssets()
-  }, [])
+  }, [tagIdsKey]) // Re-fetch when tagIds change
 
   return {
     items,

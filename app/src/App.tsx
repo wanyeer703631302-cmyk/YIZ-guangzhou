@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DistortionGallery } from './components/DistortionGallery';
 import { MouseFollowGallery } from './components/MouseFollowGallery/MouseFollowGallery';
@@ -8,6 +8,11 @@ import { TopSearchBar } from './components/TopSearchBar/TopSearchBar';
 import { FilterControl } from './components/FilterControl/FilterControl';
 import { UserSidebar } from './components/UserSidebar/UserSidebar';
 import { ImageUpload } from './components/upload/ImageUpload';
+import { FilterButton } from './components/FilterButton/FilterButton';
+import { FilterPanel } from './components/FilterPanel/FilterPanel';
+import { TagManager } from './components/TagManager/TagManager';
+import { FilterProvider, useFilter } from './contexts/FilterContext';
+import { Toaster } from 'sonner';
 // import { MaintenanceMode } from './components/MaintenanceMode/MaintenanceMode';
 import { useAssets } from './hooks/useAssets';
 // import { useHealthCheck } from './hooks/useHealthCheck';
@@ -29,20 +34,27 @@ const fallbackGalleryData: GalleryItem[] = [
   { id: 12, title: "Doodle Champion", brand: "Google", category: ["PRODUCT", "GAME", "BRAND"], year: "2021", image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&h=600&fit=crop", color: "from-green-400/20 to-teal-500/20" }
 ];
 
-function App() {
+function AppContent() {
   const [selectedUser, setSelectedUser] = useState(0);
   const [galleryMode, setGalleryMode] = useState<'distortion' | 'mouseFollow'>('distortion');
   const [searchOpen, setSearchOpen] = useState(false);
   const [userSidebarOpen, setUserSidebarOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [tagManagerOpen, setTagManagerOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Get filter context
+  const { selectedTagIds, tags, isLoading: tagsLoading, toggleTag, refreshTags, setTags } = useFilter();
 
   // 临时完全禁用健康检查
   // const { isChecking: isCheckingHealth } = useHealthCheck();
   // const { isChecking: isCheckingHealth, isHealthy, error: healthError, data: healthData, retry: retryHealth } = useHealthCheck();
 
   // 从API加载资源
-  const { items: apiItems, isLoading, error, refetch } = useAssets();
+  const { items: apiItems, isLoading, error, refetch } = useAssets({
+    tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined
+  });
   
   // 优先使用API数据，fallbackGalleryData仅在开发环境使用
   const galleryData = apiItems.length > 0 ? apiItems : (import.meta.env.DEV ? fallbackGalleryData : []);
@@ -52,6 +64,17 @@ function App() {
     { id: 2, name: '@creative_labs' },
     { id: 3, name: '@design_collective' }
   ];
+
+  // Load tags on mount
+  useEffect(() => {
+    refreshTags();
+  }, [refreshTags]);
+
+  // Handle manage tags click
+  const handleManageTags = () => {
+    setTagManagerOpen(true);
+    setFilterPanelOpen(false);
+  };
 
   // 临时禁用健康检查 - 直接显示内容
   // if (isCheckingHealth) {
@@ -181,6 +204,27 @@ function App() {
       <GalleryModeToggle mode={galleryMode} onToggle={() => setGalleryMode(prev => prev === 'distortion' ? 'mouseFollow' : 'distortion')} />
       <FilterControl />
 
+      {/* Filter Button and Panel */}
+      <FilterButton 
+        selectedCount={selectedTagIds.length}
+        onClick={() => setFilterPanelOpen(!filterPanelOpen)}
+      />
+      <FilterPanel
+        isOpen={filterPanelOpen}
+        onClose={() => setFilterPanelOpen(false)}
+        tags={tags}
+        selectedTagIds={selectedTagIds}
+        onTagToggle={toggleTag}
+        onManageTags={handleManageTags}
+        isLoading={tagsLoading}
+      />
+      <TagManager
+        isOpen={tagManagerOpen}
+        onClose={() => setTagManagerOpen(false)}
+        tags={tags}
+        onTagsChange={refreshTags}
+      />
+
       <motion.div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex gap-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.5 }}>
         {users.map((user, index) => (
           <motion.button key={user.id} onClick={() => setSelectedUser(index)} whileHover={{ scale: 1.2, y: -8 }} whileTap={{ scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }} className={`text-sm font-medium transition-colors ${selectedUser === index ? 'text-white' : 'text-zinc-500 hover:text-white'}`}>
@@ -189,6 +233,15 @@ function App() {
         ))}
       </motion.div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <FilterProvider>
+      <Toaster position="top-right" />
+      <AppContent />
+    </FilterProvider>
   );
 }
 

@@ -16,6 +16,7 @@ import type {
   User,
   UserInteractionsData,
 } from '../types/api'
+import type { Tag } from '../types/tags'
 
 /**
  * API客户端类
@@ -372,6 +373,63 @@ class ApiClient {
    */
   async getUserInteractions(): Promise<ApiResponse<UserInteractionsData>> {
     return this.request('/user/interactions')
+  }
+
+  // ==================== 标签管理 ====================
+
+  /**
+   * 获取所有标签
+   */
+  async getTags(): Promise<ApiResponse<Tag[]>> {
+    return this.request('/tags')
+  }
+
+  /**
+   * 创建标签
+   */
+  async createTag(name: string): Promise<ApiResponse<Tag>> {
+    return this.request('/tags', {
+      method: 'POST',
+      body: JSON.stringify({ name })
+    })
+  }
+
+  /**
+   * 更新标签
+   */
+  async updateTag(tagId: string, name: string): Promise<ApiResponse<Tag>> {
+    return this.request(`/tags/${tagId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name })
+    })
+  }
+
+  /**
+   * 删除标签
+   */
+  async deleteTag(tagId: string): Promise<ApiResponse<void>> {
+    return this.request(`/tags/${tagId}`, {
+      method: 'DELETE'
+    })
+  }
+
+  /**
+   * 为资源添加标签
+   */
+  async addTagToAsset(assetId: string, tagId: string): Promise<ApiResponse<void>> {
+    return this.request(`/assets/${assetId}/tags`, {
+      method: 'POST',
+      body: JSON.stringify({ tagId })
+    })
+  }
+
+  /**
+   * 从资源移除标签
+   */
+  async removeTagFromAsset(assetId: string, tagId: string): Promise<ApiResponse<void>> {
+    return this.request(`/assets/${assetId}/tags/${tagId}`, {
+      method: 'DELETE'
+    })
   }
 
   // ==================== 健康检查 ====================

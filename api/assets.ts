@@ -77,6 +77,7 @@ export default async function handler(
  * - page: Page number (default: 1)
  * - limit: Items per page (default: 20, max: 100)
  * - folderId: Filter by folder ID (optional)
+ * - tagIds: Array of tag IDs for filtering (optional, AND logic)
  * 
  * Response: { success, data: { items, total, page, limit } }
  */
@@ -103,7 +104,7 @@ async function handleGetAssets(
     }
 
     // Parse query parameters
-    const { page: pageParam, limit: limitParam, folderId } = req.query
+    const { page: pageParam, limit: limitParam, folderId, tagIds: tagIdsParam } = req.query
 
     // Parse and validate page number
     const page = Math.max(1, parseInt(pageParam as string) || 1)
@@ -115,12 +116,63 @@ async function handleGetAssets(
     // Calculate skip for pagination
     const skip = (page - 1) * limit
 
+    // Parse tagIds array
+    let tagIds: string[] = []
+    if (tagIdsParam) {
+      if (Array.isArray(tagIdsParam)) {
+        tagIds = tagIdsParam.filter(id => typeof id === 'string') as string[]
+      } else if (typeof tagIdsParam === 'string') {
+        tagIds = [tagIdsParam]
+      }
+    }
+
     // Build where clause for filtering
     const where: any = {}
     
     // Add folder filter if provided
     if (folderId && typeof folderId === 'string') {
       where.folderId = folderId
+    }
+
+    // Add tag filtering with AND logic if tagIds provided
+    if (tagIds.length > 0) {
+      // Find assets that have ALL selected tags (AND logic)
+      // Use Prisma's aggregation to find assets with all specified tags
+      const assetIdsWithAllTags = await prisma.assetTag.groupBy({
+        by: ['assetId'],
+        where: {
+          tagId: {
+            in: tagIds
+          }
+        },
+        having: {
+          tagId: {
+            _count: {
+              equals: tagIds.length
+            }
+          }
+        }
+      })
+
+      const matchingAssetIds = assetIdsWithAllTags.map(group => group.assetId)
+      
+      if (matchingAssetIds.length === 0) {
+        // No assets match all tags, return empty result
+        res.status(200).json({
+          success: true,
+          data: {
+            items: [],
+            total: 0,
+            page,
+            limit
+          }
+        })
+        return
+      }
+
+      where.id = {
+        in: matchingAssetIds
+      }
     }
 
     // Execute queries in parallel for better performance
@@ -141,17 +193,39 @@ async function handleGetAssets(
           folderId: true,
           userId: true,
           createdAt: true,
-          updatedAt: true
+          updatedAt: true,
+          tags: {
+            include: {
+              tag: {
+                select: {
+                  id: true,
+                  name: true,
+                  createdAt: true
+                }
+              }
+            }
+          }
         }
       }),
       prisma.asset.count({ where })
     ])
 
-    // Format assets data
-    const formattedAssets: AssetData[] = assets.map(asset => ({
-      ...asset,
+    // Format assets data with tags
+    const formattedAssets: any[] = assets.map(asset => ({
+      id: asset.id,
+      title: asset.title,
+      url: asset.url,
+      thumbnailUrl: asset.thumbnailUrl,
+      size: asset.size,
+      folderId: asset.folderId,
+      userId: asset.userId,
       createdAt: asset.createdAt.toISOString(),
-      updatedAt: asset.updatedAt.toISOString()
+      updatedAt: asset.updatedAt.toISOString(),
+      tags: asset.tags.map(at => ({
+        id: at.tag.id,
+        name: at.tag.name,
+        createdAt: at.tag.createdAt.toISOString()
+      }))
     }))
 
     // Build response
