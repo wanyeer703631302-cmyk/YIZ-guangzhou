@@ -149,8 +149,6 @@ export default async function handler(
       // Extract optional metadata from request body
       const title = (req.body as any)?.title || file.originalname
       const folderId = (req.body as any)?.folderId || null
-      const tagsString = (req.body as any)?.tags || ''
-      const tags = tagsString ? tagsString.split(',').map((t: string) => t.trim()).filter(Boolean) : []
 
       // Upload to Cloudinary
       let cloudinaryResult
@@ -185,48 +183,63 @@ export default async function handler(
         return
       }
 
-      // Save asset record to database
+      // Save asset record to database using raw SQL
       try {
-        const asset = await prisma.asset.create({
-          data: {
+        // Generate UUID for the asset
+        const assetId = await prisma.$queryRaw<Array<{ id: string }>>`
+          SELECT gen_random_uuid()::text as id
+        `
+        const newAssetId = assetId[0].id
+
+        // Insert asset record
+        await prisma.$executeRaw`
+          INSERT INTO assets (
+            id,
+            user_id,
+            folder_id,
             title,
-            url: cloudinaryResult.secure_url,
-            thumbnailUrl,
-            size: file.size,
-            folderId,
-            userId: authReq.userId!,
-            // Handle tags if provided
-            ...(tags.length > 0 && {
-              tags: {
-                create: tags.map((tagName: string) => ({
-                  tag: {
-                    connectOrCreate: {
-                      where: { name: tagName },
-                      create: { name: tagName }
-                    }
-                  }
-                }))
-              }
-            })
-          },
-          include: {
-            tags: {
-              include: {
-                tag: true
-              }
-            }
-          }
-        })
+            storage_url,
+            thumbnail_url,
+            file_size,
+            mime_type,
+            source_type,
+            status,
+            created_at
+          ) VALUES (
+            ${newAssetId},
+            ${authReq.userId!},
+            ${folderId},
+            ${title},
+            ${cloudinaryResult.secure_url},
+            ${thumbnailUrl},
+            ${file.size},
+            ${file.mimetype.split('/')[1]},
+            'upload',
+            'approved',
+            NOW()
+          )
+        `
 
-        // Verify the record was actually persisted to database
-        const verifyAsset = await prisma.asset.findUnique({
-          where: { id: asset.id }
-        })
+        // Verify the record was created
+        const verifyAsset = await prisma.$queryRaw<Array<{
+          id: string
+          user_id: string
+          folder_id: string | null
+          title: string
+          storage_url: string
+          thumbnail_url: string
+          file_size: number
+          created_at: Date
+        }>>`
+          SELECT id, user_id, folder_id, title, storage_url, thumbnail_url, file_size, created_at
+          FROM assets
+          WHERE id = ${newAssetId}
+        `
 
-        if (!verifyAsset) {
+        if (verifyAsset.length === 0) {
           // eslint-disable-next-line no-console
           console.error('Database verification failed: Record not found after creation', {
-            assetId: asset.id,
+            assetId: newAssetId,
             userId: authReq.userId
           })
           res.status(500).json({
@@ -236,19 +249,21 @@ export default async function handler(
           return
         }
 
+        const asset = verifyAsset[0]
+
         // Format response
         const response: ApiResponse<AssetData> = {
           success: true,
           data: {
             id: asset.id,
             title: asset.title,
-            url: asset.url,
-            thumbnailUrl: asset.thumbnailUrl,
-            size: asset.size,
-            folderId: asset.folderId,
-            userId: asset.userId,
-            createdAt: asset.createdAt.toISOString(),
-            updatedAt: asset.updatedAt.toISOString()
+            url: asset.storage_url,
+            thumbnailUrl: asset.thumbnail_url,
+            size: asset.file_size,
+            folderId: asset.folder_id,
+            userId: asset.user_id,
+            createdAt: asset.created_at.toISOString(),
+            updatedAt: asset.created_at.toISOString()
           }
         }
 
