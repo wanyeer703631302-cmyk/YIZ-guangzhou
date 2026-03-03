@@ -39,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  * GET /api/tags
  * Get all tags with image counts
  */
-async function getTags(req: VercelRequest, res: VercelResponse) {
+async function getTags(_req: VercelRequest, res: VercelResponse) {
   try {
     // Query all tags with image counts using LEFT JOIN
     const tags = await prisma.tag.findMany({

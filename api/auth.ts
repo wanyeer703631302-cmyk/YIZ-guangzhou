@@ -41,33 +41,7 @@ interface AuthResponse {
   token: string
 }
 
-/**
- * Remove password from user object
- */
-function sanitizeUser(user: any): UserData {
-  const { password, ...userWithoutPassword } = user
-  return {
-    ...userWithoutPassword,
-    createdAt: user.createdAt.toISOString(),
-    updatedAt: user.updatedAt.toISOString()
-  }
-}
 
-/**
- * Validate email format
- */
-function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
-}
-
-/**
- * Validate password strength
- */
-function isValidPassword(password: string): boolean {
-  // At least 6 characters
-  return password.length >= 6
-}
 
 /**
  * Main authentication handler
@@ -78,19 +52,25 @@ export default async function handler(
   res: VercelResponse
 ): Promise<void> {
   try {
+    // Log the incoming request for debugging
+    console.log('Auth API called:', req.url, req.method)
+    
     // Extract the endpoint from the URL
     const path = req.url?.split('?')[0] || ''
     
-    if (path.endsWith('/register')) {
+    console.log('Parsed path:', path)
+    
+    if (path.endsWith('/register') || path === '/register') {
       return await handleRegister(req, res)
-    } else if (path.endsWith('/login')) {
+    } else if (path.endsWith('/login') || path === '/login') {
       return await handleLogin(req, res)
-    } else if (path.endsWith('/session')) {
+    } else if (path.endsWith('/session') || path === '/session') {
       return await handleSession(req as AuthRequest, res)
     } else {
+      console.log('No matching route for path:', path)
       res.status(404).json({
         success: false,
-        error: 'Endpoint not found'
+        error: `Endpoint not found: ${path}`
       })
     }
   } catch (error) {
@@ -109,7 +89,7 @@ export default async function handler(
  * DISABLED: Registration is now handled by administrators only
  */
 async function handleRegister(
-  req: VercelRequest,
+  _req: VercelRequest,
   res: VercelResponse
 ): Promise<void> {
   // Registration endpoint is disabled
