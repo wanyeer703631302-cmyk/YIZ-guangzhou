@@ -152,12 +152,23 @@ async function handleLogin(
       return
     }
 
-    // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email }
-    })
+    // Find user by email using raw SQL to match actual database schema
+    const users = await prisma.$queryRaw<Array<{
+      id: string
+      email: string
+      username: string
+      password_hash: string | null
+      role: string
+      is_displayed: boolean
+      created_at: Date
+      updated_at: Date
+    }>>`
+      SELECT id, email, username, password_hash, role, is_displayed, created_at, updated_at
+      FROM users
+      WHERE email = ${email}
+    `
 
-    if (!user) {
+    if (users.length === 0) {
       res.status(401).json({
         success: false,
         error: 'Invalid email or password'
@@ -165,8 +176,10 @@ async function handleLogin(
       return
     }
 
-    // Check if user is active
-    if (!user.isActive) {
+    const user = users[0]
+
+    // Check if user account is displayed (active)
+    if (!user.is_displayed) {
       res.status(403).json({
         success: false,
         error: 'Account is disabled'
@@ -174,8 +187,17 @@ async function handleLogin(
       return
     }
 
+    // Check if password hash exists
+    if (!user.password_hash) {
+      res.status(401).json({
+        success: false,
+        error: 'Invalid email or password'
+      })
+      return
+    }
+
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password)
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash)
 
     if (!isPasswordValid) {
       res.status(401).json({
@@ -185,16 +207,22 @@ async function handleLogin(
       return
     }
 
-    // Generate JWT token with role and requirePasswordChange
-    const token = generateToken(user.id, user.role as any, user.requirePasswordChange)
+    // Generate JWT token with role (no requirePasswordChange in actual DB)
+    const token = generateToken(user.id, user.role as any, false)
 
-    // Return success response
+    // Return success response with mapped field names
     const response: ApiResponse<AuthResponse & { requirePasswordChange: boolean, role: string }> = {
       success: true,
       data: {
-        user: sanitizeUser(user),
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.username,
+          createdAt: user.created_at.toISOString(),
+          updatedAt: user.updated_at.toISOString()
+        },
         token,
-        requirePasswordChange: user.requirePasswordChange,
+        requirePasswordChange: false,
         role: user.role
       }
     }
@@ -232,12 +260,20 @@ async function handleSession(
   // Use withAuth middleware to validate token
   withAuth(req, res, async () => {
     try {
-      // Get user from database
-      const user = await prisma.user.findUnique({
-        where: { id: req.userId }
-      })
+      // Get user from database using raw SQL
+      const users = await prisma.$queryRaw<Array<{
+        id: string
+        email: string
+        username: string
+        created_at: Date
+        updated_at: Date
+      }>>`
+        SELECT id, email, username, created_at, updated_at
+        FROM users
+        WHERE id = ${req.userId}
+      `
 
-      if (!user) {
+      if (users.length === 0) {
         res.status(404).json({
           success: false,
           error: 'User not found'
@@ -245,11 +281,19 @@ async function handleSession(
         return
       }
 
-      // Return user data
+      const user = users[0]
+
+      // Return user data with mapped field names
       const response: ApiResponse<{ user: UserData }> = {
         success: true,
         data: {
-          user: sanitizeUser(user)
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.username,
+            createdAt: user.created_at.toISOString(),
+            updatedAt: user.updated_at.toISOString()
+          }
         }
       }
 
