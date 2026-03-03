@@ -50,7 +50,7 @@ export async function createAuditLog(
         action,
         performedById,
         targetUserId: targetUserId || null,
-        details: details || null,
+        details: details ? JSON.parse(JSON.stringify(details)) : null,
         ipAddress,
         userAgent
       }

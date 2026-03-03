@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { withAuth, withRole, type AuthRequest, type UserRole } from '../../../lib/auth'
+import { withAuth, withRole, type AuthRequest } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { generateTemporaryPassword, hashPassword } from '../../../lib/password'
 import { createAuditLog } from '../../../lib/audit'
