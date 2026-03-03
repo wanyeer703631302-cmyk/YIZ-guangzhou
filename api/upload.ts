@@ -1,15 +1,7 @@
-/**
- * Image Upload API Endpoint
- * 
- * POST /api/upload - Upload image to Cloudinary and save to database
- * 
- * Validates Requirements: 11.4, 11.8, 11.9, 1.3
- */
-
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import multer from 'multer'
-import { prisma } from '../lib/prisma'
-import { uploadImage } from '../lib/cloudinary'
+import { prisma, isDatabaseAvailable } from '../lib/prisma'
+import { uploadImage, cloudinary } from '../lib/cloudinary'
 import { withAuth, AuthRequest } from '../lib/auth'
 
 /**
@@ -114,6 +106,15 @@ export default async function handler(
     try {
       const authReq = req as AuthRequest
 
+      // Check database availability before processing upload
+      if (!isDatabaseAvailable) {
+        res.status(503).json({
+          success: false,
+          error: '数据库服务不可用，请联系管理员配置 DATABASE_URL'
+        })
+        return
+      }
+
       // Run multer middleware to parse multipart/form-data
       await runMiddleware(req, res, upload.single('file'))
 
@@ -175,6 +176,15 @@ export default async function handler(
         '/upload/f_auto,q_auto,c_thumb,w_400/'
       )
 
+      // Validate userId before database save
+      if (!authReq.userId) {
+        res.status(401).json({
+          success: false,
+          error: '用户认证信息缺失'
+        })
+        return
+      }
+
       // Save asset record to database
       try {
         const asset = await prisma.asset.create({
@@ -208,6 +218,24 @@ export default async function handler(
           }
         })
 
+        // Verify the record was actually persisted to database
+        const verifyAsset = await prisma.asset.findUnique({
+          where: { id: asset.id }
+        })
+
+        if (!verifyAsset) {
+          // eslint-disable-next-line no-console
+          console.error('Database verification failed: Record not found after creation', {
+            assetId: asset.id,
+            userId: authReq.userId
+          })
+          res.status(500).json({
+            success: false,
+            error: '数据库记录验证失败，请重试'
+          })
+          return
+        }
+
         // Format response
         const response: ApiResponse<AssetData> = {
           success: true,
@@ -228,11 +256,32 @@ export default async function handler(
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         // eslint-disable-next-line no-console
-        console.error('Database save error:', errorMessage)
+        console.error('Database save error:', {
+          userId: authReq.userId,
+          fileSize: file.size,
+          cloudinaryUrl: cloudinaryResult.secure_url,
+          error: errorMessage
+        })
+        
+        // Clean up Cloudinary upload on database failure
+        try {
+          await cloudinary.uploader.destroy(cloudinaryResult.public_id)
+          // eslint-disable-next-line no-console
+          console.log('Cloudinary cleanup successful:', cloudinaryResult.public_id)
+        } catch (cleanupError: unknown) {
+          const cleanupErrorMessage = cleanupError instanceof Error ? cleanupError.message : 'Unknown error'
+          // eslint-disable-next-line no-console
+          console.error('Cloudinary cleanup failed:', {
+            publicId: cloudinaryResult.public_id,
+            error: cleanupErrorMessage
+          })
+        }
+        
         res.status(500).json({
           success: false,
-          error: '保存图片记录到数据库失败'
+          error: `保存图片记录到数据库失败: ${errorMessage}`
         })
+        return
       }
     } catch (error: unknown) {
       // eslint-disable-next-line no-console

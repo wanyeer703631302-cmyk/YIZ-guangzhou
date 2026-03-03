@@ -203,6 +203,14 @@ class ApiClient {
       }
 
       if (!response.ok) {
+        // Handle specific status codes
+        if (response.status === 503) {
+          return {
+            success: false,
+            error: data.error || '数据库服务暂时不可用，请稍后重试或联系管理员',
+          }
+        }
+        
         return {
           success: false,
           error: data.error || `上传失败 (HTTP ${response.status})`,

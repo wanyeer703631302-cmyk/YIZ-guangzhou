@@ -10,20 +10,46 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// User role enumeration
+enum UserRole {
+  ADMIN
+  USER
+}
+
+// Audit action enumeration
+enum AuditAction {
+  USER_CREATED
+  USER_UPDATED
+  USER_DELETED
+  USER_ROLE_CHANGED
+  USER_PASSWORD_RESET
+  USER_PASSWORD_CHANGED
+  USER_LOGIN
+  USER_LOGOUT
+}
+
 // User model - stores user authentication and profile information
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  email                 String   @unique
+  name                  String
+  password              String
+  role                  UserRole @default(USER)
+  isActive              Boolean  @default(true)
+  requirePasswordChange Boolean  @default(false)
+  createdBy             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   // Relations
-  assets    Asset[]
-  likes     Like[]
-  favorites Favorite[]
-  folders   Folder[]
+  assets           Asset[]
+  likes            Like[]
+  favorites        Favorite[]
+  folders          Folder[]
+  creator          User?      @relation("UserCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdUsers     User[]     @relation("UserCreator")
+  performedAudits  AuditLog[] @relation("PerformedBy")
+  targetedAudits   AuditLog[] @relation("TargetUser")
 
   @@map("users")
 }
@@ -132,4 +158,27 @@ model Favorite {
   @@index([userId])
   @@index([assetId])
   @@map("favorites")
+}
+
+// AuditLog model - stores audit trail of user management operations
+model AuditLog {
+  id            String      @id @default(cuid())
+  action        AuditAction
+  performedById String
+  targetUserId  String?
+  details       Json?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime    @default(now())
+
+  // Relations
+  performedBy User  @relation("PerformedBy", fields: [performedById], references: [id], onDelete: Cascade)
+  targetUser  User? @relation("TargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  // Indexes for performance
+  @@index([performedById])
+  @@index([targetUserId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

@@ -6,7 +6,8 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   isAuthenticated: boolean
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  requirePasswordChange: boolean
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; requirePasswordChange?: boolean }>
   register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   refreshSession: () => Promise<void>
@@ -21,6 +22,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [requirePasswordChange, setRequirePasswordChange] = useState(false)
 
   // 验证会话
   const validateSession = async () => {
@@ -65,7 +67,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (response.success && response.data) {
         console.log('AuthContext: 设置用户', response.data.user)
         setUser(response.data.user)
-        return { success: true }
+        
+        // 检查是否需要修改密码
+        const needsPasswordChange = (response.data as any).requirePasswordChange || false
+        setRequirePasswordChange(needsPasswordChange)
+        
+        return { 
+          success: true,
+          requirePasswordChange: needsPasswordChange
+        }
       } else {
         console.error('AuthContext: 登录失败', response.error)
         return {
@@ -119,6 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     loading,
     isAuthenticated: !!user,
+    requirePasswordChange,
     login,
     register,
     logout,

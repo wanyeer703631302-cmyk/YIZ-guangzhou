@@ -106,97 +106,18 @@ export default async function handler(
  * Handle user registration
  * POST /api/auth/register
  * 
- * Request body: { email, password, name }
- * Response: { success, data: { user, token } }
+ * DISABLED: Registration is now handled by administrators only
  */
 async function handleRegister(
   req: VercelRequest,
   res: VercelResponse
 ): Promise<void> {
-  // Only allow POST requests
-  if (req.method !== 'POST') {
-    res.status(405).json({
-      success: false,
-      error: 'Method not allowed'
-    })
-    return
-  }
-
-  try {
-    const { email, password, name } = req.body
-
-    // Validate required fields
-    if (!email || !password || !name) {
-      res.status(400).json({
-        success: false,
-        error: 'Email, password, and name are required'
-      })
-      return
-    }
-
-    // Validate email format
-    if (!isValidEmail(email)) {
-      res.status(400).json({
-        success: false,
-        error: 'Invalid email format'
-      })
-      return
-    }
-
-    // Validate password strength
-    if (!isValidPassword(password)) {
-      res.status(400).json({
-        success: false,
-        error: 'Password must be at least 6 characters long'
-      })
-      return
-    }
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    })
-
-    if (existingUser) {
-      res.status(409).json({
-        success: false,
-        error: 'User with this email already exists'
-      })
-      return
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10)
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name
-      }
-    })
-
-    // Generate JWT token
-    const token = generateToken(user.id)
-
-    // Return success response
-    const response: ApiResponse<AuthResponse> = {
-      success: true,
-      data: {
-        user: sanitizeUser(user),
-        token
-      }
-    }
-
-    res.status(201).json(response)
-  } catch (error) {
-    console.error('Registration error:', error)
-    res.status(500).json({
-      success: false,
-      error: 'Failed to register user'
-    })
-  }
+  // Registration endpoint is disabled
+  res.status(410).json({
+    success: false,
+    error: 'Public registration is disabled. Please contact an administrator to create an account.'
+  })
+  return
 }
 
 /**
@@ -204,7 +125,7 @@ async function handleRegister(
  * POST /api/auth/login
  * 
  * Request body: { email, password }
- * Response: { success, data: { user, token } }
+ * Response: { success, data: { user, token, requirePasswordChange } }
  */
 async function handleLogin(
   req: VercelRequest,
@@ -244,6 +165,15 @@ async function handleLogin(
       return
     }
 
+    // Check if user is active
+    if (!user.isActive) {
+      res.status(403).json({
+        success: false,
+        error: 'Account is disabled'
+      })
+      return
+    }
+
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password)
 
@@ -255,15 +185,17 @@ async function handleLogin(
       return
     }
 
-    // Generate JWT token
-    const token = generateToken(user.id)
+    // Generate JWT token with role and requirePasswordChange
+    const token = generateToken(user.id, user.role as any, user.requirePasswordChange)
 
     // Return success response
-    const response: ApiResponse<AuthResponse> = {
+    const response: ApiResponse<AuthResponse & { requirePasswordChange: boolean, role: string }> = {
       success: true,
       data: {
         user: sanitizeUser(user),
-        token
+        token,
+        requirePasswordChange: user.requirePasswordChange,
+        role: user.role
       }
     }
 
