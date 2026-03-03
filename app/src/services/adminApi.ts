@@ -1,5 +1,4 @@
 import type {
-  User,
   CreateUserRequest,
   CreateUserResponse,
   UpdateUserRequest,

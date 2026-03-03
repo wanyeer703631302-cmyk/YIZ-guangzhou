@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getUserList, getAuditLogs } from '../services/adminApi'
-import type { User, AuditLog } from '../types/admin'
+import type { AuditLog } from '../types/admin'
 
 export function AdminDashboard() {
   const [stats, setStats] = useState({

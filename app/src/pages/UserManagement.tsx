@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getUserList, deleteUser } from '../services/adminApi'
+import { getUserList } from '../services/adminApi'
 import type { User } from '../types/admin'
 import { CreateUserModal } from '../components/admin/CreateUserModal'
 import { EditUserModal } from '../components/admin/EditUserModal'

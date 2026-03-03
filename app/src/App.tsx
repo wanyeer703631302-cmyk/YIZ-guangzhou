@@ -45,7 +45,7 @@ function AppContent() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Get filter context
-  const { selectedTagIds, tags, isLoading: tagsLoading, toggleTag, refreshTags, setTags } = useFilter();
+  const { selectedTagIds, tags, isLoading: tagsLoading, toggleTag, refreshTags } = useFilter();
 
   // 临时完全禁用健康检查
   // const { isChecking: isCheckingHealth } = useHealthCheck();
