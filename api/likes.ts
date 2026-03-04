@@ -77,7 +77,7 @@ async function handleCreateLike(
       if (!assetId) {
         res.status(400).json({
           success: false,
-          error: 'ç¼ºå?å¿…é??‚æ•°: assetId'
+          error: 'Missing required parameter: assetId'
         })
         return
       }
@@ -90,7 +90,7 @@ async function handleCreateLike(
       if (!asset) {
         res.status(404).json({
           success: false,
-          error: 'èµ„æ?ä¸å???
+          error: 'Asset not found'
         })
         return
       }
@@ -145,7 +145,7 @@ async function handleCreateLike(
       console.error('Create like error:', errorMessage)
       res.status(500).json({
         success: false,
-        error: '?›å»º?¹è?å¤±è´¥ï¼Œè¯·ç¨å??è?'
+        error: 'Failed to create like, please try again later'
       })
     }
   })
@@ -176,7 +176,7 @@ async function handleDeleteLike(
       if (!likeId) {
         res.status(400).json({
           success: false,
-          error: 'ç¼ºå?å¿…é??‚æ•°: id'
+          error: 'Missing required parameter: id'
         })
         return
       }
@@ -189,7 +189,7 @@ async function handleDeleteLike(
       if (!like) {
         res.status(404).json({
           success: false,
-          error: '?¹è?è®°å?ä¸å???
+          error: 'Like not found'
         })
         return
       }
@@ -198,7 +198,7 @@ async function handleDeleteLike(
       if (like.userId !== authReq.userId) {
         res.status(403).json({
           success: false,
-          error: '? æ?? é™¤æ­¤ç‚¹èµè®°å½?
+          error: 'No permission to remove this like'
         })
         return
       }
@@ -219,7 +219,7 @@ async function handleDeleteLike(
       console.error('Delete like error:', errorMessage)
       res.status(500).json({
         success: false,
-        error: '? é™¤?¹è?å¤±è´¥ï¼Œè¯·ç¨å??è?'
+        error: 'Failed to delete like, please try again later'
       })
     }
   })

@@ -7,6 +7,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { Prisma } from '@prisma/client'
 // Dynamic import to avoid initialization errors
 // import { prisma } from './_lib/prisma'
 
@@ -87,7 +88,7 @@ async function handleGetAssets(
 ): Promise<void> {
   try {
     // Dynamically import prisma to avoid initialization errors
-    const { prisma, isDatabaseAvailable } = await import('../lib/prisma')
+    const { prisma, isDatabaseAvailable } = await import('./_lib/prisma')
     
     if (!isDatabaseAvailable) {
       // Return empty result if database is not configured
@@ -126,106 +127,96 @@ async function handleGetAssets(
       }
     }
 
-    // Build where clause for filtering
-    const where: any = {}
-    
-    // Add folder filter if provided
-    if (folderId && typeof folderId === 'string') {
-      where.folderId = folderId
-    }
+    const folderFilter = folderId && typeof folderId === 'string'
+      ? Prisma.sql`AND a.folder_id = ${folderId}`
+      : Prisma.empty
 
-    // Add tag filtering with AND logic if tagIds provided
-    if (tagIds.length > 0) {
-      // Find assets that have ALL selected tags (AND logic)
-      // Use Prisma's aggregation to find assets with all specified tags
-      const assetIdsWithAllTags = await prisma.assetTag.groupBy({
-        by: ['assetId'],
-        where: {
-          tagId: {
-            in: tagIds
-          }
-        },
-        having: {
-          tagId: {
-            _count: {
-              equals: tagIds.length
-            }
-          }
-        }
-      })
+    const tagFilter = tagIds.length > 0
+      ? Prisma.sql`AND a.id IN (
+          SELECT at.asset_id
+          FROM asset_tags at
+          WHERE at.tag_id IN (${Prisma.join(tagIds)})
+          GROUP BY at.asset_id
+          HAVING COUNT(DISTINCT at.tag_id) = ${tagIds.length}
+        )`
+      : Prisma.empty
 
-      const matchingAssetIds = assetIdsWithAllTags.map(group => group.assetId)
-      
-      if (matchingAssetIds.length === 0) {
-        // No assets match all tags, return empty result
-        res.status(200).json({
-          success: true,
-          data: {
-            items: [],
-            total: 0,
-            page,
-            limit
-          }
+    const assets = await prisma.$queryRaw<Array<{
+      id: string
+      title: string
+      storage_url: string
+      thumbnail_url: string
+      file_size: number
+      folder_id: string | null
+      user_id: string
+      created_at: Date
+    }>>(Prisma.sql`
+      SELECT
+        a.id,
+        a.title,
+        a.storage_url,
+        a.thumbnail_url,
+        a.file_size,
+        a.folder_id,
+        a.user_id,
+        a.created_at
+      FROM assets a
+      WHERE 1 = 1
+      ${folderFilter}
+      ${tagFilter}
+      ORDER BY a.created_at DESC
+      LIMIT ${limit} OFFSET ${skip}
+    `)
+
+    const totalRows = await prisma.$queryRaw<Array<{ total: number }>>(Prisma.sql`
+      SELECT COUNT(*)::int AS total
+      FROM assets a
+      WHERE 1 = 1
+      ${folderFilter}
+      ${tagFilter}
+    `)
+
+    const total = totalRows[0]?.total ?? 0
+
+    const assetIds = assets.map(asset => asset.id)
+    let tagsMap = new Map<string, Array<{ id: string; name: string; createdAt: string }>>()
+
+    if (assetIds.length > 0) {
+      const tagRows = await prisma.$queryRaw<Array<{
+        asset_id: string
+        id: string
+        name: string
+        created_at: Date
+      }>>(Prisma.sql`
+        SELECT at.asset_id, t.id, t.name, t.created_at
+        FROM asset_tags at
+        INNER JOIN tags t ON t.id = at.tag_id
+        WHERE at.asset_id IN (${Prisma.join(assetIds)})
+      `)
+
+      tagsMap = tagRows.reduce((map, row) => {
+        const current = map.get(row.asset_id) ?? []
+        current.push({
+          id: row.id,
+          name: row.name,
+          createdAt: row.created_at.toISOString()
         })
-        return
-      }
-
-      where.id = {
-        in: matchingAssetIds
-      }
+        map.set(row.asset_id, current)
+        return map
+      }, new Map<string, Array<{ id: string; name: string; createdAt: string }>>())
     }
 
-    // Execute queries in parallel for better performance
-    const [assets, total] = await Promise.all([
-      prisma.asset.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: {
-          createdAt: 'desc'
-        },
-        select: {
-          id: true,
-          title: true,
-          url: true,
-          thumbnailUrl: true,
-          size: true,
-          folderId: true,
-          userId: true,
-          createdAt: true,
-          updatedAt: true,
-          tags: {
-            include: {
-              tag: {
-                select: {
-                  id: true,
-                  name: true,
-                  createdAt: true
-                }
-              }
-            }
-          }
-        }
-      }),
-      prisma.asset.count({ where })
-    ])
-
-    // Format assets data with tags
     const formattedAssets: any[] = assets.map(asset => ({
       id: asset.id,
       title: asset.title,
-      url: asset.url,
-      thumbnailUrl: asset.thumbnailUrl,
-      size: asset.size,
-      folderId: asset.folderId,
-      userId: asset.userId,
-      createdAt: asset.createdAt.toISOString(),
-      updatedAt: asset.updatedAt.toISOString(),
-      tags: asset.tags.map(at => ({
-        id: at.tag.id,
-        name: at.tag.name,
-        createdAt: at.tag.createdAt.toISOString()
-      }))
+      url: asset.storage_url,
+      thumbnailUrl: asset.thumbnail_url,
+      size: asset.file_size,
+      folderId: asset.folder_id,
+      userId: asset.user_id,
+      createdAt: asset.created_at.toISOString(),
+      updatedAt: asset.created_at.toISOString(),
+      tags: tagsMap.get(asset.id) ?? []
     }))
 
     // Build response

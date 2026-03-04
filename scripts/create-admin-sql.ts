@@ -11,6 +11,7 @@ const prisma = new PrismaClient()
 async function createAdminWithSQL() {
   const email = 'admin@yiz.com'
   const password = 'Admin123456'
+  const username = 'admin'
 
   try {
     // 检查是否已存在
@@ -30,8 +31,8 @@ async function createAdminWithSQL() {
     // 使用原始 SQL 创建管理员
     // 只插入数据库中实际存在的字段
     await prisma.$executeRaw`
-      INSERT INTO users (email, role, "createdAt")
-      VALUES (${email}, 'ADMIN', NOW())
+      INSERT INTO users (email, username, password_hash, role, created_at, updated_at)
+      VALUES (${email}, ${username}, ${hashedPassword}, 'ADMIN', NOW(), NOW())
     `
 
     console.log('✅ 管理员账号创建成功！')

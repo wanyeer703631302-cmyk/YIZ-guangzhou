@@ -54,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!user) {
       return res.status(404).json({
         success: false,
-        error: '?�户不�???
+        error: '用户不存在'
       })
     }
 
@@ -63,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        error: '当�?密�?不正�?
+        error: '当前密码不正确'
       })
     }
 
@@ -73,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (isSamePassword) {
         return res.status(400).json({
           success: false,
-          error: '?��??��??��?临时密�??��?'
+          error: '新密码不能与临时密码相同'
         })
       }
     }

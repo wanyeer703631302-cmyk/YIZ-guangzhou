@@ -46,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('User management error:', error)
     return res.status(500).json({
       success: false,
-      error: '?�务?��?�?
+      error: '服务异常'
     })
   }
 }
@@ -91,7 +91,7 @@ async function handleCreateUser(req: AuthRequest, res: VercelResponse) {
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        error: '该邮箱已被使??
+        error: '该邮箱已被使用'
       })
     }
 
@@ -142,7 +142,7 @@ async function handleCreateUser(req: AuthRequest, res: VercelResponse) {
     console.error('Create user error:', error)
     return res.status(500).json({
       success: false,
-      error: '?�建?�户失败'
+      error: '创建用户失败'
     })
   }
 }
@@ -192,7 +192,7 @@ async function handleGetUsers(req: AuthRequest, res: VercelResponse) {
     console.error('Get users error:', error)
     return res.status(500).json({
       success: false,
-      error: '?��??�户?�表失败'
+      error: '获取用户列表失败'
     })
   }
 }

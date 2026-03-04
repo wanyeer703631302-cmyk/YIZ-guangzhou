@@ -45,7 +45,7 @@ export function withAuth(
     req.requirePasswordChange = decoded.requirePasswordChange
 
     next()
-  } catch (error) {
+  } catch (_error) {
     res.status(401).json({ success: false, error: 'Invalid token' })
   }
 }

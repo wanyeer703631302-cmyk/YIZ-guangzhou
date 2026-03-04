@@ -237,7 +237,6 @@ export function useThreeScene(options: UseThreeSceneOptions): UseThreeSceneRetur
       console.error('useThreeScene error:', error);
       setError(error);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [container]); // 只依赖 container，textures 和 items 在初始化后不应改变
 
   return {

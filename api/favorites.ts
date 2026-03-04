@@ -77,7 +77,7 @@ async function handleCreateFavorite(
       if (!assetId) {
         res.status(400).json({
           success: false,
-          error: 'ç¼ºå?å¿…é??‚æ•°: assetId'
+          error: 'Missing required parameter: assetId'
         })
         return
       }
@@ -90,7 +90,7 @@ async function handleCreateFavorite(
       if (!asset) {
         res.status(404).json({
           success: false,
-          error: 'èµ„æ?ä¸å???
+          error: 'Asset not found'
         })
         return
       }
@@ -145,7 +145,7 @@ async function handleCreateFavorite(
       console.error('Create favorite error:', errorMessage)
       res.status(500).json({
         success: false,
-        error: '?›å»º?¶è?å¤±è´¥ï¼Œè¯·ç¨å??è?'
+        error: 'Failed to create favorite, please try again later'
       })
     }
   })
@@ -176,7 +176,7 @@ async function handleDeleteFavorite(
       if (!favoriteId) {
         res.status(400).json({
           success: false,
-          error: 'ç¼ºå?å¿…é??‚æ•°: id'
+          error: 'Missing required parameter: id'
         })
         return
       }
@@ -189,7 +189,7 @@ async function handleDeleteFavorite(
       if (!favorite) {
         res.status(404).json({
           success: false,
-          error: '?¶è?è®°å?ä¸å???
+          error: 'Favorite not found'
         })
         return
       }
@@ -198,7 +198,7 @@ async function handleDeleteFavorite(
       if (favorite.userId !== authReq.userId) {
         res.status(403).json({
           success: false,
-          error: '? æ?? é™¤æ­¤æ”¶?è®°å½?
+          error: 'No permission to remove this favorite'
         })
         return
       }
@@ -219,7 +219,7 @@ async function handleDeleteFavorite(
       console.error('Delete favorite error:', errorMessage)
       res.status(500).json({
         success: false,
-        error: '? é™¤?¶è?å¤±è´¥ï¼Œè¯·ç¨å??è?'
+        error: 'Failed to delete favorite, please try again later'
       })
     }
   })

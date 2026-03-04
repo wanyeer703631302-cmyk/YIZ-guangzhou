@@ -79,7 +79,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
         // 显示错误消息
         setError(response.error || '注册失败，请重试')
       }
-    } catch (err) {
+    } catch (_err) {
       setError('网络错误，请检查您的连接')
     } finally {
       setLoading(false)

@@ -7,6 +7,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { Prisma } from '@prisma/client'
 // Dynamic import to avoid initialization errors
 // import { prisma } from '../_lib/prisma'
 import { withAuth, AuthRequest } from '../_lib/auth'
@@ -83,7 +84,7 @@ async function handleGetInteractions(
   withAuth(req as AuthRequest, res, async () => {
     try {
       // Dynamically import prisma to avoid initialization errors
-      const { prisma, isDatabaseAvailable } = await import('../../lib/prisma')
+      const { prisma, isDatabaseAvailable } = await import('../_lib/prisma')
       
       if (!isDatabaseAvailable) {
         // Return empty data if database is not configured
@@ -100,43 +101,43 @@ async function handleGetInteractions(
       const authReq = req as AuthRequest
       const userId = authReq.userId!
 
-      // Fetch likes and favorites in parallel for better performance
       const [likes, favorites] = await Promise.all([
-        prisma.like.findMany({
-          where: { userId },
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            assetId: true,
-            userId: true,
-            createdAt: true
-          }
-        }),
-        prisma.favorite.findMany({
-          where: { userId },
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            assetId: true,
-            userId: true,
-            createdAt: true
-          }
-        })
+        prisma.$queryRaw<Array<{
+          id: string
+          asset_id: string
+          user_id: string
+          created_at: Date
+        }>>(Prisma.sql`
+          SELECT id, asset_id, user_id, created_at
+          FROM likes
+          WHERE user_id = ${userId}
+          ORDER BY created_at DESC
+        `),
+        prisma.$queryRaw<Array<{
+          id: string
+          asset_id: string
+          user_id: string
+          created_at: Date
+        }>>(Prisma.sql`
+          SELECT id, asset_id, user_id, created_at
+          FROM favorites
+          WHERE user_id = ${userId}
+          ORDER BY created_at DESC
+        `)
       ])
 
-      // Format the data
       const formattedLikes: LikeData[] = likes.map(like => ({
         id: like.id,
-        assetId: like.assetId,
-        userId: like.userId,
-        createdAt: like.createdAt.toISOString()
+        assetId: like.asset_id,
+        userId: like.user_id,
+        createdAt: like.created_at.toISOString()
       }))
 
       const formattedFavorites: FavoriteData[] = favorites.map(favorite => ({
         id: favorite.id,
-        assetId: favorite.assetId,
-        userId: favorite.userId,
-        createdAt: favorite.createdAt.toISOString()
+        assetId: favorite.asset_id,
+        userId: favorite.user_id,
+        createdAt: favorite.created_at.toISOString()
       }))
 
       const response: ApiResponse<InteractionsData> = {

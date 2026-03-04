@@ -14,7 +14,6 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import * as fc from 'fast-check'
 
 describe('Property 1: Fault Condition - Graceful Error Handling', () => {
   const originalEnv = process.env

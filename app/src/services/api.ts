@@ -131,36 +131,11 @@ class ApiClient {
   ): Promise<ApiResponse<Asset>> {
     console.log('uploadAsset 调用, token:', this.token)
     
-    // 演示模式：如果使用演示账号，模拟上传成功
+    // 演示模式：提示不支持云端上传，避免误导为 Cloudinary 已同步
     if (this.token?.startsWith('demo-token-')) {
-      console.log('使用演示模式上传')
-      // 模拟上传延迟
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      // 创建本地预览URL
-      const previewUrl = URL.createObjectURL(file)
-      
-      const demoAsset: Asset = {
-        id: 'demo-asset-' + Date.now(),
-        title: metadata?.title || file.name,
-        url: previewUrl,
-        thumbnailUrl: previewUrl,
-        size: file.size,
-        folderId: metadata?.folderId || null,
-        userId: 'demo-user-id',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-      
-      // 保存到 localStorage
-      const demoAssets = JSON.parse(localStorage.getItem('demo_assets') || '[]')
-      demoAssets.unshift(demoAsset) // 添加到开头
-      localStorage.setItem('demo_assets', JSON.stringify(demoAssets))
-      
-      console.log('演示模式上传成功:', demoAsset)
       return {
-        success: true,
-        data: demoAsset
+        success: false,
+        error: '演示账号不支持上传到 Cloudinary，请使用注册账号登录后上传'
       }
     }
 

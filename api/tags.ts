@@ -82,7 +82,7 @@ async function createTag(req: VercelRequest, res: VercelResponse) {
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     return res.status(400).json({
       success: false,
-      error: '?�签?�称不能为空'
+      error: '标签名称不能为空'
     })
   }
 
@@ -102,7 +102,7 @@ async function createTag(req: VercelRequest, res: VercelResponse) {
     if (existing) {
       return res.status(400).json({
         success: false,
-        error: '?�签?�称已�???
+        error: '标签名称已存在'
       })
     }
 
@@ -138,7 +138,7 @@ async function updateTag(req: VercelRequest, res: VercelResponse) {
   if (!id || typeof id !== 'string') {
     return res.status(400).json({
       success: false,
-      error: '?��??��?签ID'
+      error: '无效的标签ID'
     })
   }
 
@@ -146,7 +146,7 @@ async function updateTag(req: VercelRequest, res: VercelResponse) {
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     return res.status(400).json({
       success: false,
-      error: '?�签?�称不能为空'
+      error: '标签名称不能为空'
     })
   }
 
@@ -161,7 +161,7 @@ async function updateTag(req: VercelRequest, res: VercelResponse) {
     if (!existing) {
       return res.status(404).json({
         success: false,
-        error: '?�签不�???
+        error: '?�签不�???
       })
     }
 
@@ -181,7 +181,7 @@ async function updateTag(req: VercelRequest, res: VercelResponse) {
     if (duplicate) {
       return res.status(400).json({
         success: false,
-        error: '?�签?�称已�???
+        error: '?�签?�称已�???
       })
     }
 
@@ -215,7 +215,7 @@ async function deleteTag(req: VercelRequest, res: VercelResponse) {
   if (!id || typeof id !== 'string') {
     return res.status(400).json({
       success: false,
-      error: '?��??��?签ID'
+      error: '?��??��?签ID'
     })
   }
 
@@ -228,7 +228,7 @@ async function deleteTag(req: VercelRequest, res: VercelResponse) {
     if (!existing) {
       return res.status(404).json({
         success: false,
-        error: '?�签不�???
+        error: '?�签不�???
       })
     }
 

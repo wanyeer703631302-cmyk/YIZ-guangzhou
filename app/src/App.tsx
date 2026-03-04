@@ -149,7 +149,7 @@ function AppContent() {
       )}
 
       <main className="relative z-10">
-        <section className="min-h-screen flex items-center justify-center" id="work">
+        <section className="h-screen" id="work">
           {/* 加载状态 */}
           {isLoading && (
             <div className="flex items-center justify-center">
@@ -190,7 +190,7 @@ function AppContent() {
 
           {/* 画廊内容 - 当有数据时显示（API数据或开发环境的fallback数据） */}
           {!isLoading && galleryData.length > 0 && (
-            <motion.div key={galleryMode} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="w-full h-full">
+            <motion.div key={galleryMode} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="w-full h-screen">
               {galleryMode === 'distortion' ? (
                 <DistortionGallery items={galleryData} />
               ) : (

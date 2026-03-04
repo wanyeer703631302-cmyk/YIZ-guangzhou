@@ -27,6 +27,16 @@ interface AuthResponse {
   token: string
 }
 
+type LoginRow = {
+  id: string
+  email: string
+  username: string | null
+  password_hash: string
+  role: string | null
+  created_at: Date
+  updated_at: Date
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
@@ -56,20 +66,20 @@ export default async function handler(
     }
 
     console.log('Attempting to query user:', email)
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        password: true,
-        role: true,
-        isActive: true,
-        requirePasswordChange: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    })
+    const users = await prisma.$queryRaw<LoginRow[]>`
+      SELECT
+        id,
+        email,
+        username,
+        password_hash,
+        role,
+        created_at,
+        updated_at
+      FROM users
+      WHERE email = ${email}
+      LIMIT 1
+    `
+    const user = users[0]
 
     if (!user) {
       console.log('User not found')
@@ -80,19 +90,13 @@ export default async function handler(
       return
     }
 
-    console.log('User found:', user.id, 'role:', user.role)
+    const normalizedRole = user.role?.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER'
+    const requirePasswordChange = false
 
-    if (!user.isActive) {
-      console.log('User account is disabled')
-      res.status(403).json({
-        success: false,
-        error: 'Account is disabled'
-      })
-      return
-    }
+    console.log('User found:', user.id, 'role:', normalizedRole)
 
     console.log('Verifying password')
-    const isPasswordValid = await bcrypt.compare(password, user.password)
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash)
 
     if (!isPasswordValid) {
       console.log('Password verification failed')
@@ -104,7 +108,7 @@ export default async function handler(
     }
 
     console.log('Password verified, generating token')
-    const token = generateToken(user.id, user.role, user.requirePasswordChange)
+    const token = generateToken(user.id, normalizedRole, requirePasswordChange)
 
     console.log('Token generated successfully')
     const response: ApiResponse<AuthResponse & { requirePasswordChange: boolean, role: string }> = {
@@ -113,24 +117,29 @@ export default async function handler(
         user: {
           id: user.id,
           email: user.email,
-          name: user.name,
-          createdAt: user.createdAt.toISOString(),
-          updatedAt: user.updatedAt.toISOString()
+          name: user.username || user.email,
+          createdAt: user.created_at.toISOString(),
+          updatedAt: user.updated_at.toISOString()
         },
         token,
-        requirePasswordChange: user.requirePasswordChange,
-        role: user.role
+        requirePasswordChange,
+        role: normalizedRole
       }
     }
 
     res.status(200).json(response)
   } catch (error) {
-    console.error('Login error:', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Login error:', message)
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-    res.status(500).json({
-      success: false,
-      error: 'Failed to login: ' + (error instanceof Error ? error.message : 'Unknown error')
-    })
+
+    const isDbConnectivityError = message.includes('P1001') || message.includes("Can't reach database server")
+    if (isDbConnectivityError) {
+      res.status(503).json({ success: false, error: '数据库连接暂时不可用，请稍后重试' })
+      return
+    }
+
+    res.status(500).json({ success: false, error: 'Failed to login' })
   }
 }
 

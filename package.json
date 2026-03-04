@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:api\"",
     "dev:frontend": "cd app && npm run dev",
-    "dev:api": "tsx watch api/index.ts",
+    "dev:api": "tsx watch api/dev-server.ts",
     "build": "npm run build:frontend && npm run build:api",
     "build:frontend": "cd app && npm run build",
     "build:api": "tsc --project tsconfig.api.json",
